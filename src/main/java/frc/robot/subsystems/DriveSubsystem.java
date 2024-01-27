@@ -68,6 +68,43 @@ public class DriveSubsystem extends SubsystemBase {
           m_rearRight.getPosition()
       });
 
+
+  /**
+   * X speed sent to the SparkMax AFTER limiting
+   */
+  private double xSpeedCommanded;
+
+  /**
+   * X speed sent to the SparkMax AFTER limiting
+   */
+  private double ySpeedCommanded;
+
+  /**
+   * X speed sent to the SparkMax BEFORE limiting
+   */
+  private double xSpeedRequested;
+
+  /**
+   * X speed sent to the SparkMax BEFORE limiting
+   */
+  private double ySpeedRequested;
+
+  /**
+   * Requested rotation
+   */
+  private double requestedRotation;
+
+  /**
+   * True if usring field relative coordinates
+   */
+  private boolean fieldRelative;
+
+  /**
+   * true if rates are limited
+   */
+  private boolean rateLimit;
+  
+
   /** Creates a new DriveSubsystem. */
   public DriveSubsystem() {
     try {
@@ -75,7 +112,6 @@ public class DriveSubsystem extends SubsystemBase {
     } catch (RuntimeException ex) {
       DriverStation.reportError("Error instantiating navX MXP:  " + ex.getMessage(), true);
     }
-
   }
 
   @Override
@@ -89,8 +125,6 @@ public class DriveSubsystem extends SubsystemBase {
             m_rearLeft.getPosition(),
             m_rearRight.getPosition()
         });
-    // System.out.println(m_gyro.getAngle()*-1);
-    SmartDashboard.putNumber("Angle", m_gyro.getAngle() * -1);
   }
 
   /**
@@ -131,9 +165,12 @@ public class DriveSubsystem extends SubsystemBase {
    */
   public void drive(double xSpeed, double ySpeed, double rot, boolean fieldRelative, boolean rateLimit) {
 
-    double xSpeedCommanded;
-    double ySpeedCommanded;
-
+    this.xSpeedRequested = xSpeed;
+    this.ySpeedRequested = ySpeed;
+    this.requestedRotation = rot;
+    this.fieldRelative = fieldRelative;
+    this.rateLimit = rateLimit;
+    
     if (rateLimit) {
       // Convert XY to polar for rate limiting
       double inputTranslationDir = Math.atan2(ySpeed, xSpeed);
@@ -251,5 +288,25 @@ public class DriveSubsystem extends SubsystemBase {
    */
   public double getTurnRate() {
     return m_gyro.getRate() * (DriveConstants.kGyroReversed ? -1.0 : 1.0);
+  }
+
+  public void testInit() {
+    //add items to Shuffleboard
+    System.out.println("Drive testInit()");
+    SmartDashboard.putData(this);
+    //Shuffleboard.
+  }
+
+  public void testPeriodic() {
+    //System.out.println("Drive testPeriodic()");
+    // System.out.println(m_gyro.getAngle()*-1);
+    SmartDashboard.putNumber("Angle", m_gyro.getAngle() * -1);
+    SmartDashboard.putNumber("xSpeedCommanded",xSpeedCommanded);
+    SmartDashboard.putNumber("ySpeedCommanded",ySpeedCommanded);
+    SmartDashboard.putNumber("xSpeedRequested",xSpeedRequested);
+    SmartDashboard.putNumber("ySpeedRequested",ySpeedRequested);
+    SmartDashboard.putNumber("requestedRotation", requestedRotation);
+    SmartDashboard.putBoolean("fieldRelative)", fieldRelative);
+    SmartDashboard.putBoolean("rateLimit", rateLimit);
   }
 }
