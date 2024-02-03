@@ -68,7 +68,6 @@ public class DriveSubsystem extends SubsystemBase {
           m_rearRight.getPosition()
       });
 
-
   /**
    * X speed sent to the SparkMax AFTER limiting
    */
@@ -103,7 +102,6 @@ public class DriveSubsystem extends SubsystemBase {
    * true if rates are limited
    */
   private boolean rateLimit;
-  
 
   /** Creates a new DriveSubsystem. */
   public DriveSubsystem() {
@@ -125,6 +123,11 @@ public class DriveSubsystem extends SubsystemBase {
             m_rearLeft.getPosition(),
             m_rearRight.getPosition()
         });
+
+    Pose2d pose = this.getPose();
+    SmartDashboard.putNumber("odoX", pose.getX());
+    SmartDashboard.putNumber("odoY", pose.getY());
+    SmartDashboard.putNumber("gAngle", -m_gyro.getAngle());
   }
 
   /**
@@ -170,7 +173,7 @@ public class DriveSubsystem extends SubsystemBase {
     this.requestedRotation = rot;
     this.fieldRelative = fieldRelative;
     this.rateLimit = rateLimit;
-    
+
     if (rateLimit) {
       // Convert XY to polar for rate limiting
       double inputTranslationDir = Math.atan2(ySpeed, xSpeed);
@@ -291,20 +294,20 @@ public class DriveSubsystem extends SubsystemBase {
   }
 
   public void testInit() {
-    //add items to Shuffleboard
+    // add items to Shuffleboard
     System.out.println("Drive testInit()");
     SmartDashboard.putData(this);
-    //Shuffleboard.
+    // Shuffleboard.
   }
 
   public void testPeriodic() {
-    //System.out.println("Drive testPeriodic()");
+    // System.out.println("Drive testPeriodic()");
     // System.out.println(m_gyro.getAngle()*-1);
     SmartDashboard.putNumber("Angle", m_gyro.getAngle() * -1);
-    SmartDashboard.putNumber("xSpeedCommanded",xSpeedCommanded);
-    SmartDashboard.putNumber("ySpeedCommanded",ySpeedCommanded);
-    SmartDashboard.putNumber("xSpeedRequested",xSpeedRequested);
-    SmartDashboard.putNumber("ySpeedRequested",ySpeedRequested);
+    SmartDashboard.putNumber("xSpeedCommanded", xSpeedCommanded);
+    SmartDashboard.putNumber("ySpeedCommanded", ySpeedCommanded);
+    SmartDashboard.putNumber("xSpeedRequested", xSpeedRequested);
+    SmartDashboard.putNumber("ySpeedRequested", ySpeedRequested);
     SmartDashboard.putNumber("requestedRotation", requestedRotation);
     SmartDashboard.putBoolean("fieldRelative)", fieldRelative);
     SmartDashboard.putBoolean("rateLimit", rateLimit);

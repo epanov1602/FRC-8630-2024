@@ -19,7 +19,11 @@ import edu.wpi.first.wpilibj.XboxController.Button;
 import frc.robot.Constants.AutoConstants;
 import frc.robot.Constants.DriveConstants;
 import frc.robot.Constants.OIConstants;
+import frc.robot.commands.AimToVisualTarget;
+import frc.robot.commands.GoToPoint;
+import frc.robot.commands.ResetOdometry;
 import frc.robot.subsystems.DriveSubsystem;
+import frc.robot.subsystems.LimelightCamera;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.SwerveControllerCommand;
@@ -34,10 +38,12 @@ import java.util.List;
  */
 public class RobotContainer {
         // The robot's subsystems
-        private final static DriveSubsystem m_robotDrive = new DriveSubsystem();
+        private static DriveSubsystem m_robotDrive = new DriveSubsystem();
 
+        private static LimelightCamera m_camera = new LimelightCamera();
+ 
         // The driver's controller
-        XboxController m_driverController = new XboxController(OIConstants.kDriverControllerPort);
+        private XboxController m_driverController = new XboxController(OIConstants.kDriverControllerPort);
 
         /**
          * The container for the robot. Contains subsystems, OI devices, and commands.
@@ -46,20 +52,27 @@ public class RobotContainer {
                 // Configure the button bindings
                 configureButtonBindings();
 
-                // Configure default commands
-                m_robotDrive.setDefaultCommand(
-                                // The left stick controls translation of the robot.
-                                // Turning is controlled by the X axis of the right stick.
-                                new RunCommand(
-                                                () -> m_robotDrive.drive(
-                                                                -MathUtil.applyDeadband(m_driverController.getLeftY(),
-                                                                                OIConstants.kDriveDeadband),
-                                                                -MathUtil.applyDeadband(m_driverController.getLeftX(),
-                                                                                OIConstants.kDriveDeadband),
-                                                                -MathUtil.applyDeadband(m_driverController.getRightX(),
-                                                                                OIConstants.kDriveDeadband),
-                                                                true, true),
-                                                m_robotDrive));
+                Runnable joystickDriveControl = null;
+                if (Constants.DriveConstants.kCopterJoystickLayout) {
+                        // copter layoyt: right stick for movement, left stick for rotation
+                        joystickDriveControl = () -> m_robotDrive.drive(
+                                                                -MathUtil.applyDeadband(m_driverController.getRightY(), OIConstants.kDriveDeadband),
+                                                                -MathUtil.applyDeadband(m_driverController.getRightX(), OIConstants.kDriveDeadband),
+                                                                -MathUtil.applyDeadband(m_driverController.getLeftX(), OIConstants.kDriveDeadband),
+                                                                Constants.DriveConstants.kFieldRelative,
+                                                                true);
+                } else {
+                        // tank layoyt: left stick for movement, right stick for rotation 
+                        joystickDriveControl = () -> m_robotDrive.drive(
+                                                                -MathUtil.applyDeadband(m_driverController.getLeftY(), OIConstants.kDriveDeadband),
+                                                                -MathUtil.applyDeadband(m_driverController.getLeftX(), OIConstants.kDriveDeadband),
+                                                                -MathUtil.applyDeadband(m_driverController.getRightX(), OIConstants.kDriveDeadband),
+                                                                Constants.DriveConstants.kFieldRelative,
+                                                                true);
+                }
+
+                // Configure default teleop commands
+                m_robotDrive.setDefaultCommand(new RunCommand(joystickDriveControl, m_robotDrive));
         }
 
         /**
@@ -72,10 +85,25 @@ public class RobotContainer {
          * {@link JoystickButton}.
          */
         private void configureButtonBindings() {
-                new JoystickButton(m_driverController, Button.kX.value)
-                                .whileTrue(new RunCommand(
-                                                () -> m_robotDrive.setX(),
-                                                m_robotDrive));
+                Command goThereAndFaceWest = GoToPoint.create(m_robotDrive, 3, -1, 90);
+                JoystickButton btnB = new JoystickButton(m_driverController, Button.kB.value);
+                btnB.onTrue(goThereAndFaceWest); // go to this point and face West
+
+                Command comeBackAndFaceNorth = GoToPoint.create(m_robotDrive, 0.2, 0.0, 0);
+                JoystickButton btnA = new JoystickButton(m_driverController, Button.kA.value);
+                btnA.onTrue(comeBackAndFaceNorth); // come back in front of zero to zero and face North
+        
+                Command aimToTag = new AimToVisualTarget(m_robotDrive, m_camera, 0, true, true); 
+                JoystickButton btnY = new JoystickButton(m_driverController, Button.kY.value);
+                btnY.onTrue(aimToTag); 
+
+                Command parkingBrake = new RunCommand(() -> m_robotDrive.setX(), m_robotDrive);
+                JoystickButton btnX = new JoystickButton(m_driverController, Button.kX.value);
+                btnX.whileTrue(parkingBrake);
+
+                Command resetOdometry = new ResetOdometry(m_robotDrive)
+                JoystickButton btnRightBumper = new JoystickButton(m_driverController, Button.kRightBumper.value);
+                btnRightBumper.onTrue(resetOdometry);
         }
 
         /**
@@ -84,44 +112,7 @@ public class RobotContainer {
          * @return the command to run in autonomous
          */
         public Command getAutonomousCommand() {
-                // Create config for trajectory
-                TrajectoryConfig config = new TrajectoryConfig(
-                                AutoConstants.kMaxSpeedMetersPerSecond,
-                                AutoConstants.kMaxAccelerationMetersPerSecondSquared)
-                                // Add kinematics to ensure max speed is actually obeyed
-                                .setKinematics(DriveConstants.kDriveKinematics);
-
-                // An example trajectory to follow. All units in meters.
-                Trajectory exampleTrajectory = TrajectoryGenerator.generateTrajectory(
-                                // Start at the origin facing the +X direction
-                                new Pose2d(0, 0, new Rotation2d(0)),
-                                // Pass through these two interior waypoints, making an 's' curve path
-                                List.of(new Translation2d(1, 1), new Translation2d(2, -1)),
-                                // End 3 meters straight ahead of where we started, facing forward
-                                new Pose2d(3, 0, new Rotation2d(0)),
-                                config);
-
-                var thetaController = new ProfiledPIDController(
-                                AutoConstants.kPThetaController, 0, 0, AutoConstants.kThetaControllerConstraints);
-                thetaController.enableContinuousInput(-Math.PI, Math.PI);
-
-                SwerveControllerCommand swerveControllerCommand = new SwerveControllerCommand(
-                                exampleTrajectory,
-                                m_robotDrive::getPose, // Functional interface to feed supplier
-                                DriveConstants.kDriveKinematics,
-
-                                // Position controllers
-                                new PIDController(AutoConstants.kPXController, 0, 0),
-                                new PIDController(AutoConstants.kPYController, 0, 0),
-                                thetaController,
-                                m_robotDrive::setModuleStates,
-                                m_robotDrive);
-
-                // Reset odometry to the starting pose of the trajectory.
-                m_robotDrive.resetOdometry(exampleTrajectory.getInitialPose());
-
-                // Run path following command, then stop at the end.
-                return swerveControllerCommand.andThen(() -> m_robotDrive.drive(0, 0, 0, false, false));
+                return new AimToVisualTarget(m_robotDrive, m_camera, 0, false, false);
         }
 
         public static void testInit() {
