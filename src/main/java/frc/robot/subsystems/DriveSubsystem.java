@@ -115,7 +115,7 @@ public class DriveSubsystem extends SubsystemBase {
   @Override
   public void periodic() {
     // Update the odometry in the periodic block
-    m_odometry.update(
+    Pose2d pose = m_odometry.update(
         Rotation2d.fromDegrees(m_gyro.getAngle() * -1),
         new SwerveModulePosition[] {
             m_frontLeft.getPosition(),
@@ -124,10 +124,9 @@ public class DriveSubsystem extends SubsystemBase {
             m_rearRight.getPosition()
         });
 
-    Pose2d pose = this.getPose();
     SmartDashboard.putNumber("odoX", pose.getX());
     SmartDashboard.putNumber("odoY", pose.getY());
-    SmartDashboard.putNumber("gAngle", -m_gyro.getAngle());
+    SmartDashboard.putNumber("odoHeading", pose.getRotation().getDegrees());
   }
 
   /**

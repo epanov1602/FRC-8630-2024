@@ -26,6 +26,7 @@ import frc.robot.subsystems.DriveSubsystem;
 import frc.robot.subsystems.LimelightCamera;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.RunCommand;
+import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.SwerveControllerCommand;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 import java.util.List;
@@ -85,25 +86,19 @@ public class RobotContainer {
          * {@link JoystickButton}.
          */
         private void configureButtonBindings() {
-                Command goThereAndFaceWest = GoToPoint.create(m_robotDrive, 3, -1, 90);
-                JoystickButton btnB = new JoystickButton(m_driverController, Button.kB.value);
-                btnB.onTrue(goThereAndFaceWest); // go to this point and face West
-
-                Command comeBackAndFaceNorth = GoToPoint.create(m_robotDrive, 0.2, 0.0, 0);
+                Command comeBackAndFaceNorth = GoToPoint.create(m_robotDrive, 1, 1, 0);
                 JoystickButton btnA = new JoystickButton(m_driverController, Button.kA.value);
                 btnA.onTrue(comeBackAndFaceNorth); // come back in front of zero to zero and face North
         
                 Command aimToTag = new AimToVisualTarget(m_robotDrive, m_camera, 0, true, true); 
-                JoystickButton btnY = new JoystickButton(m_driverController, Button.kY.value);
-                btnY.onTrue(aimToTag); 
+                JoystickButton btnB = new JoystickButton(m_driverController, Button.kB.value);
+                btnB.onTrue(aimToTag);
 
-                Command parkingBrake = new RunCommand(() -> m_robotDrive.setX(), m_robotDrive);
-                JoystickButton btnX = new JoystickButton(m_driverController, Button.kX.value);
-                btnX.whileTrue(parkingBrake);
-
-                Command resetOdometry = new ResetOdometry(m_robotDrive)
-                JoystickButton btnRightBumper = new JoystickButton(m_driverController, Button.kRightBumper.value);
-                btnRightBumper.onTrue(resetOdometry);
+                Command goandaim = new SequentialCommandGroup(
+                        GoToPoint.create(m_robotDrive, 1, 1, 0),
+                        (new AimToVisualTarget(m_robotDrive, m_camera, 0, true, false)));
+                JoystickButton goandaimButton = new JoystickButton(m_driverController, Button.kY.value);
+                goandaimButton.onTrue(goandaim);
         }
 
         /**

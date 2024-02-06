@@ -48,29 +48,6 @@ public class AimToVisualTarget extends Command {
        executeTargetFound(targetX);
   }
 
-  private void executeTargetFound(double targetX) {
-      System.out.println("target at x=" + targetX);
-      // if X is negative, we want to turn right (and if X is positive, we want to turn left)
-      double turnSpeed = -targetX * SeekingTurnSpeed / 15;
-      // 30 is the maximum value of X in Limelight: so if X is already closer than 30, we want to be turning slower than SeekingTurnSpeed (to avoid overshooting)
-      if (turnSpeed > MaxTurnSpeed)
-        turnSpeed = MaxTurnSpeed;
-      else if (turnSpeed < -MaxTurnSpeed)
-        turnSpeed = -MaxTurnSpeed;
-      m_drivetrain.drive(0, 0, turnSpeed, Constants.DriveConstants.kFieldRelative, true);
-}
-
-  private void executeTargetNotFound() {
-      // not seeing the target
-      if (m_seekIfNotFound) {
-        // keep turning until found it, because the user has set m_seekIfNotFound
-        m_drivetrain.drive(0, 0, SeekingTurnSpeed, Constants.DriveConstants.kFieldRelative, true);
-      } else {
-        // do not move when not seeing the target
-        m_drivetrain.drive(0, 0, 0, Constants.DriveConstants.kFieldRelative, true);
-      }
-  }
-
   // Called once the command ends or is interrupted.
   @Override
   public void end(boolean interrupted) {
@@ -95,4 +72,29 @@ public class AimToVisualTarget extends Command {
     } else
       return false; // otherwise, we are not finished yet
   }
+
+
+  private void executeTargetFound(double targetX) {
+      System.out.println("target at x=" + targetX);
+      // if X is negative, we want to turn right (and if X is positive, we want to turn left)
+      double turnSpeed = -targetX * SeekingTurnSpeed / 15;
+      // 30 is the maximum value of X in Limelight: so if X is already closer than 30, we want to be turning slower than SeekingTurnSpeed (to avoid overshooting)
+      if (turnSpeed > MaxTurnSpeed)
+        turnSpeed = MaxTurnSpeed;
+      else if (turnSpeed < -MaxTurnSpeed)
+        turnSpeed = -MaxTurnSpeed;
+      m_drivetrain.drive(0, 0, turnSpeed, Constants.DriveConstants.kFieldRelative, true);
+  }
+
+  private void executeTargetNotFound() {
+      // not seeing the target
+      if (m_seekIfNotFound) {
+        // keep turning until found it, because the user has set m_seekIfNotFound
+        m_drivetrain.drive(0, 0, SeekingTurnSpeed, Constants.DriveConstants.kFieldRelative, true);
+      } else {
+        // do not move when not seeing the target
+        m_drivetrain.drive(0, 0, 0, Constants.DriveConstants.kFieldRelative, true);
+      }
+  }
+
 }
