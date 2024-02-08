@@ -141,6 +141,13 @@ public class MAXSwerveModule {
    * @param desiredState Desired state with speed and angle.
    */
   public void setDesiredState(SwerveModuleState desiredState) {
+    if (Math.abs(desiredState.speedMetersPerSecond) < ModuleConstants.kDrivingMinSpeedMetersPerSecond) {
+      // if WPILib doesn't want us to move at all, don't bother to bring the wheels back to zero angle yet
+      // (causes cycling in-and-out of brownout protection when battery is lower: https://youtu.be/0Xi9yb1IMyA)
+      stop();
+      return;
+    }
+
     // Apply chassis angular offset to the desired state.
     SwerveModuleState correctedDesiredState = new SwerveModuleState();
     correctedDesiredState.speedMetersPerSecond = desiredState.speedMetersPerSecond;
@@ -155,6 +162,11 @@ public class MAXSwerveModule {
     m_turningPIDController.setReference(optimizedDesiredState.angle.getRadians(), CANSparkMax.ControlType.kPosition);
 
     m_desiredState = desiredState;
+  }
+
+  public void stop() {
+    m_drivingPIDController.setReference(0, CANSparkMax.ControlType.kVelocity);
+    m_turningPIDController.setReference(m_turningEncoder.getPosition(), CANSparkMax.ControlType.kPosition);
   }
 
   /** Zeroes all the SwerveModule encoders. */

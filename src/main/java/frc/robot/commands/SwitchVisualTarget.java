@@ -5,19 +5,21 @@
 package frc.robot.commands;
 
 import edu.wpi.first.wpilibj2.command.InstantCommand;
-import frc.robot.subsystems.DriveSubsystem;
+import frc.robot.subsystems.LimelightCamera;
 
-public class ResetOdometry extends InstantCommand {
-  DriveSubsystem m_drivetrain;
+public class SwitchVisualTarget extends InstantCommand {
+  private final LimelightCamera m_camera;
+  private final int m_pipelineIndex;
 
-  public ResetOdometry(DriveSubsystem drivetrain) {
-    m_drivetrain = drivetrain;
-    addRequirements(drivetrain);
+  public SwitchVisualTarget(LimelightCamera camera, int pipelineIndex) {
+    m_camera = camera;
+    m_pipelineIndex = pipelineIndex;
+    addRequirements(camera);
   }
 
   // Called when the command is initially scheduled.
   @Override
   public void initialize() {
-    m_drivetrain.resetOdometry();
+    m_camera.setPipeline(m_pipelineIndex);
   }
 }

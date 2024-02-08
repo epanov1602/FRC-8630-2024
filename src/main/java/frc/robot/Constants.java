@@ -5,8 +5,10 @@
 package frc.robot;
 
 import com.revrobotics.CANSparkBase.IdleMode;
+
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
+import edu.wpi.first.math.kinematics.SwerveDriveKinematics; 
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.math.util.Units;
 
@@ -43,25 +45,37 @@ public final class Constants {
     public static final int kShooterMotorB = 13;
   }
 
+  public final class OdometryConstants {
+    // initial position of robot on the field (does not have to be {x=0, y=0})
+    public static final double kInitialX = 0;
+    public static final double kInitialY = 0;
+    public static final double kInitialHeadingDegrees = 0;
+  }
+
   public static final class DriveConstants {
     public static final boolean kFieldRelative = true;
-    public static final boolean kCopterJoystickLayout = false;
+    public static final boolean kCopterJoystickLayout = true;
 
+    /****  Chassis configuration ****/
+    public static final double kTrackWidth = Units.inchesToMeters(24.0);
+    public static final double kWheelBase = Units.inchesToMeters(27.25);
+    public static final double kPhysicalMaxSpeedMetersPerSecond = 5;
+    public static final double kPhysicalMaxAngularSpeedRadiansPerSecond = 2 * 2 * Math.PI; // radians per second
+    public static final double kPhysicalMaxAccelerationMetersPerSecondSquared = 5; // to avoid slipping when on floor
+    
     // Driving Parameters - Note that these are not the maximum capable speeds of
     // the robot, rather the allowed maximum speeds
-    public static final double kMaxSpeedMetersPerSecond = 1.8;
-    public static final double kMaxAngularSpeed = 1 * Math.PI; // radians per second
+    public static final double kMaxSpeedMetersPerSecond = 0.36 * kPhysicalMaxSpeedMetersPerSecond;
+    public static final double kMaxAngularSpeed = 0.5 * kPhysicalMaxAngularSpeedRadiansPerSecond; // radians per second
+    public static final double kMaxRateLimitedAngularSpeed = 0.25 * kPhysicalMaxAngularSpeedRadiansPerSecond; // smaller turn speed when under human control
+    public static final double kMaxAccelerationMetersPerSecondSquared = 0.6 * kPhysicalMaxAccelerationMetersPerSecondSquared;
+    public static final double kMaxAngularAccelerationRadiansPerSecondSquared = kMaxAccelerationMetersPerSecondSquared / Math.sqrt(kWheelBase * kWheelBase + kTrackWidth * kTrackWidth);
 
     public static final double kDirectionSlewRate = 1.2; // radians per second
     public static final double kMagnitudeSlewRate = 1.8; // percent per second (1 = 100%)
     public static final double kRotationalSlewRate = 2.0; // percent per second (1 = 100%)
 
-    /****  Chassis configuration ****/
-    // Distance between centers of right and left wheels on robot
-    public static final double kTrackWidth = Units.inchesToMeters(26.5);
-    // Distance between front and back wheels on robot
-    public static final double kWheelBase = Units.inchesToMeters(26.5);
-    
+
     public static final SwerveDriveKinematics kDriveKinematics = new SwerveDriveKinematics(
         new Translation2d(kWheelBase / 2, kTrackWidth / 2),
         new Translation2d(kWheelBase / 2, -kTrackWidth / 2),
@@ -118,9 +132,9 @@ public final class Constants {
     public static final double kDrivingMinOutput = -1;
     public static final double kDrivingMaxOutput = 1;
 
-    public static final double kTurningP = 1;
+    public static final double kTurningP = 0.5;
     public static final double kTurningI = 0;
-    public static final double kTurningD = 0;
+    public static final double kTurningD = 0.7;
     public static final double kTurningFF = 0;
     public static final double kTurningMinOutput = -1;
     public static final double kTurningMaxOutput = 1;
@@ -130,6 +144,8 @@ public final class Constants {
 
     public static final int kDrivingMotorCurrentLimit = 50; // amps
     public static final int kTurningMotorCurrentLimit = 20; // amps
+
+    public static final double kDrivingMinSpeedMetersPerSecond = 0.01; // avoids oscillations at low battery going in-and-out of brownout (might need to be lower)
   }
 
   public static final class OIConstants {
@@ -143,19 +159,38 @@ public final class Constants {
   }
 
   public static final class AutoConstants {
-    public static final double kMaxSpeedMetersPerSecond = 3;
-    public static final double kMaxAccelerationMetersPerSecondSquared = 3;
-    public static final double kMaxAngularSpeedRadiansPerSecond = Math.PI;
-    public static final double kMaxAngularSpeedRadiansPerSecondSquared = Math.PI;
+    // simple driving and turning
 
-    public static final double kPXController = 1;
-    public static final double kPYController = 1;
-    public static final double kPThetaController = 1;
+    // turning
+    public static final double kPRotation = 0.06 / DriveConstants.kMaxAngularSpeed; // proportional gain for rotation: if set too high, robot will overshoot
+    public static final double kMaxTurningSpeed = 0.99;
+    public static final double kMinTurningSpeed = 0.03; // any value lower than this causes motors to not spin at all
+    public static final double kDirectionToleranceDegrees = 3; // plus minus 3 degrees of direction tolerance is ok
+    public static final double kTurningSpeedToleranceDegreesPerSecond = 7; // if the chassis is moving slower than this and facing the right way, we can stop aiming
+      
+    // driving
+    public static final double kPTranslation = 3.2 / DriveConstants.kMaxSpeedMetersPerSecond; // proportional gain for forward motion: if set too high, robot will overshoot
+    public static final double kMaxForwardSpeed = 0.99;
+    public static final double kMinForwardSpeed = 0.07; // any value lower than this causes motors to not spin at all
+    public static final double kDistanceTolerance = 0.1; // meters
+    public static final double kForwardSpeedTolerance = 0.05; // meters per second
+    public static final double kOversteerFactor = 0.33; // between 0 and 1 please
+    public static final double kOversteerCapDegrees = 45; // do not oversteer by more than this much
 
-    // Constraint for the motion profiled robot angle controller
-    public static final TrapezoidProfile.Constraints kThetaControllerConstraints = new TrapezoidProfile.Constraints(
-        kMaxAngularSpeedRadiansPerSecond, kMaxAngularSpeedRadiansPerSecondSquared);
+    // swerve trajectory following
+    public static final double kPTranslationForTrajectory = 1.5; // translation gain for catching up with trajectory
+    public static final double kPRotationForTrajectory = 3; // rotation gain for catching up with trajectory
+    public static final TrapezoidProfile.Constraints kRotationControllerConstraints =
+      new TrapezoidProfile.Constraints(
+            DriveConstants.kPhysicalMaxAngularSpeedRadiansPerSecond / 10,
+            DriveConstants.kMaxAngularAccelerationRadiansPerSecondSquared / 4);
   }
+
+  public static final class CameraConstants {
+    public static final Rotation2d kPickupCameraImageRotation = Rotation2d.fromDegrees(-30);
+    public static final String kPickupCameraName = "limelight-pickup";
+    public static final int kNotePipelineIndex = 9;
+  };
 
   public static final class NeoMotorConstants {
     public static final double kFreeSpeedRpm = 5676;
@@ -195,7 +230,7 @@ public final class Constants {
   /*
      * Initial Shooter values used at startup
    */
-    public static final class ShooterConstants {
+  public static final class ShooterConstants {
     // PID coefficients
     public static final double initialP = 5e-5;
     public static final double initialI = 1e-6;

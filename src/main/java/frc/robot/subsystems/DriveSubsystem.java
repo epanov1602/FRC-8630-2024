@@ -21,6 +21,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 import frc.robot.Constants.DriveConstants;
+import frc.robot.Constants.OdometryConstants;
 import frc.utils.SwerveUtils;
 
 
@@ -61,15 +62,7 @@ public class DriveSubsystem extends SubsystemBase {
   private double m_prevTime = WPIUtilJNI.now() * 1e-6;
 
   // Odometry class for tracking robot pose
-  SwerveDriveOdometry m_odometry = new SwerveDriveOdometry(
-      DriveConstants.kDriveKinematics,
-      Rotation2d.fromDegrees(m_gyro.getAngle() * -1),
-      new SwerveModulePosition[] {
-          m_frontLeft.getPosition(),
-          m_frontRight.getPosition(),
-          m_rearLeft.getPosition(),
-          m_rearRight.getPosition()
-      });
+  SwerveDriveOdometry m_odometry;
 
   /**
    * X speed sent to the SparkMax AFTER limiting
@@ -97,22 +90,34 @@ public class DriveSubsystem extends SubsystemBase {
   private double requestedRotation;
 
   /**
-   * True if usring field relative coordinates
-   */
-  private boolean fieldRelative;
-
-  /**
    * true if rates are limited
    */
   private boolean rateLimit;
 
   /** Creates a new DriveSubsystem. */
   public DriveSubsystem() {
+
     try {
+      Thread.sleep(1000); // wait for one second while gyro recalibrates
       m_gyro.enableLogging(true);
     } catch (RuntimeException ex) {
       DriverStation.reportError("Error instantiating navX MXP:  " + ex.getMessage(), true);
+    } catch (Exception ex) {
+      DriverStation.reportError("Unexpected error instantiating navX MXP:  " + ex.getMessage(), true);
     }
+
+    zeroHeading();
+
+    m_odometry = new SwerveDriveOdometry(
+      DriveConstants.kDriveKinematics,
+      Rotation2d.fromDegrees(m_gyro.getAngle() * -1),
+      new SwerveModulePosition[] {
+          m_frontLeft.getPosition(),
+          m_frontRight.getPosition(),
+          m_rearLeft.getPosition(),
+          m_rearRight.getPosition()
+      });
+    resetOdometry();
   }
 
   @Override
@@ -142,20 +147,31 @@ public class DriveSubsystem extends SubsystemBase {
   }
 
   /**
-   * Resets the odometry to the specified pose.
+   * Resets the odometry to the pose from OdometryConstants
    *
    * @param pose The pose to which to set the odometry.
    */
+  public void resetOdometry() {
+    zeroHeading();
+    resetOdometry(new Pose2d(OdometryConstants.kInitialX, OdometryConstants.kInitialY, Rotation2d.fromDegrees(OdometryConstants.kInitialHeadingDegrees)));
+  }
+
   public void resetOdometry(Pose2d pose) {
     m_odometry.resetPosition(
         Rotation2d.fromDegrees(m_gyro.getAngle() * -1),
-        new SwerveModulePosition[] {
-            m_frontLeft.getPosition(),
-            m_frontRight.getPosition(),
-            m_rearLeft.getPosition(),
-            m_rearRight.getPosition()
-        },
+        new SwerveModulePosition[] { m_frontLeft.getPosition(), m_frontRight.getPosition(), m_rearLeft.getPosition(), m_rearRight.getPosition() },
         pose);
+  }
+
+  public void stopModules() {
+    m_frontLeft.stop();
+    m_frontRight.stop();
+    m_rearLeft.stop();
+    m_rearRight.stop();
+  }
+
+   public void arcadeDrive(double fwdSpeed, double rotationSpeed) {
+    drive(fwdSpeed, 0, rotationSpeed, false, false);
   }
 
   /**
@@ -173,7 +189,6 @@ public class DriveSubsystem extends SubsystemBase {
     this.xSpeedRequested = xSpeed;
     this.ySpeedRequested = ySpeed;
     this.requestedRotation = rot;
-    this.fieldRelative = fieldRelative;
     this.rateLimit = rateLimit;
 
     if (rateLimit) {
@@ -225,7 +240,10 @@ public class DriveSubsystem extends SubsystemBase {
     // Convert the commanded speeds into the correct units for the drivetrain
     double xSpeedDelivered = xSpeedCommanded * DriveConstants.kMaxSpeedMetersPerSecond;
     double ySpeedDelivered = ySpeedCommanded * DriveConstants.kMaxSpeedMetersPerSecond;
+
     double rotDelivered = m_currentRotation * DriveConstants.kMaxAngularSpeed;
+    if (rateLimit)
+      rotDelivered = m_currentRotation * DriveConstants.kMaxRateLimitedAngularSpeed; // can be lower, for manual driving
 
     var swerveModuleStates = DriveConstants.kDriveKinematics.toSwerveModuleStates(
         fieldRelative
@@ -238,6 +256,10 @@ public class DriveSubsystem extends SubsystemBase {
     m_frontRight.setDesiredState(swerveModuleStates[1]);
     m_rearLeft.setDesiredState(swerveModuleStates[2]);
     m_rearRight.setDesiredState(swerveModuleStates[3]);
+  }
+
+  public ChassisSpeeds getChassisSpeeds() {
+    return DriveConstants.kDriveKinematics.toChassisSpeeds(m_frontLeft.getState(), m_frontRight.getState(), m_rearLeft.getState(), m_rearRight.getState());
   }
 
   /**
@@ -311,7 +333,6 @@ public class DriveSubsystem extends SubsystemBase {
     SmartDashboard.putNumber("xSpeedRequested", xSpeedRequested);
     SmartDashboard.putNumber("ySpeedRequested", ySpeedRequested);
     SmartDashboard.putNumber("requestedRotation", requestedRotation);
-    SmartDashboard.putBoolean("fieldRelative)", fieldRelative);
     SmartDashboard.putBoolean("rateLimit", rateLimit);
   }
 }
