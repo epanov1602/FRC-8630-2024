@@ -25,6 +25,7 @@ public class Intake extends SubsystemBase {
 
     m_motor = new CANSparkFlex(CANID, kBrushless);
     m_motor.restoreFactoryDefaults();
+    m_motor.setInverted(true);//forward = intake
     // todo N.O. for testing & development - N.C. for production KSM 2024-02-18
     m_forwardLimit = m_motor.getForwardLimitSwitch(kNormallyOpen);
     m_forwardLimit.enableLimitSwitch(true);
@@ -47,13 +48,22 @@ public class Intake extends SubsystemBase {
   }
 
   /**
-   * Enable the limit switch and turn on motor
+   * Enable the limit switch and turn on motor forward
    */
   public void intakeNote(){
     m_forwardLimit.enableLimitSwitch(true);
-    setSpeed(0.5);
+    setSpeed(0.3);
   }
 
+  /**
+   * Disable the limit switch and turn on motor forward
+   */
+  public void feedNoteToShooter(){
+    m_forwardLimit.enableLimitSwitch(false);
+    setSpeed(0.3);
+  }
+
+ 
   /**
    * Set the motor speed and display speed on rio log
    * @param speed
@@ -67,4 +77,6 @@ public class Intake extends SubsystemBase {
   public void periodic() {
     // This method will be called once per scheduler run
   }
+
+  
 }

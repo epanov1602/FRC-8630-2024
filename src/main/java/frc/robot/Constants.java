@@ -50,9 +50,6 @@ public final class Constants {
     public static final double kInitialX = 0;
     public static final double kInitialY = 0;
     public static final double kInitialHeadingDegrees = 0;
-
-    public static final int kIntakeLeadMotor = 10;
-    public static final int kIntakeFollowMotor = 11;
   }
 
   public static final class DriveConstants {
