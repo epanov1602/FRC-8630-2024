@@ -32,6 +32,11 @@ import frc.robot.commands.MockPickupCommand;
 import frc.robot.commands.ResetOdometry;
 import frc.robot.subsystems.DriveSubsystem;
 import frc.robot.subsystems.LimelightCamera;
+
+import frc.robot.commands.EjectNote;
+import frc.robot.commands.IntakeNote;
+import frc.robot.subsystems.Intake;
+
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.ParallelRaceGroup;

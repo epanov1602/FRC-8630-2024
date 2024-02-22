@@ -32,6 +32,13 @@ public class Intake extends SubsystemBase {
   }
 
   /**
+   * Returns true if the note is inside (for deciding when the note was successfully picked up, or successfully released)
+   */
+  public boolean isNoteInside() { 
+    return m_forwardLimit.isPressed();
+  }
+
+  /**
    * Enable or disable limit switch
    * @param state
    */
@@ -44,7 +51,7 @@ public class Intake extends SubsystemBase {
    */
   public void feedToShooter(){
     m_forwardLimit.enableLimitSwitch(false);
-    m_motor.set(0.5);
+    setSpeed(0.5);
   }
 
   /**
@@ -56,6 +63,14 @@ public class Intake extends SubsystemBase {
   }
 
   /**
+   * Enable the limit switch and turn on motor forward
+   */
+  public void ejectNote(){
+    m_forwardLimit.enableLimitSwitch(false);
+    setSpeed(-0.5);
+  }
+
+  /**
    * Disable the limit switch and turn on motor forward
    */
   public void feedNoteToShooter(){
@@ -63,12 +78,18 @@ public class Intake extends SubsystemBase {
     setSpeed(0.3);
   }
 
+  /**
+   * Stop, but do not change limit switch state
+   */
+  public void stop(){
+    setSpeed(0);
+  }
  
   /**
    * Set the motor speed and display speed on rio log
    * @param speed
    */
-  public void setSpeed(double speed) {
+  private void setSpeed(double speed) {
     m_motor.set(speed);
     System.out.println("Intake: " + speed);
   }
