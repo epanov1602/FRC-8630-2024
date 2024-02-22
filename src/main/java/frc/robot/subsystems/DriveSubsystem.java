@@ -17,6 +17,7 @@ import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.util.WPIUtilJNI;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.SPI;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
@@ -62,7 +63,10 @@ public class DriveSubsystem extends SubsystemBase {
   private double m_prevTime = WPIUtilJNI.now() * 1e-6;
 
   // Odometry class for tracking robot pose
-  SwerveDriveOdometry m_odometry;
+  public final SwerveDriveOdometry m_odometry;
+
+  // Wiggle drive time
+  public double m_startWiggleTime = 0;
 
   /**
    * X speed sent to the SparkMax AFTER limiting
@@ -170,7 +174,28 @@ public class DriveSubsystem extends SubsystemBase {
     m_rearRight.stop();
   }
 
-   public void arcadeDrive(double fwdSpeed, double rotationSpeed) {
+  public void wiggleDrive(double fwdSpeed, double wiggleRotationSpeed, double wiggleIntervalSeconds) {
+    if (m_startWiggleTime == 0)
+      m_startWiggleTime = Timer.getFPGATimestamp();
+
+    // how many wiggles have we done already?
+    double wiggleCount = (Timer.getFPGATimestamp() - m_startWiggleTime) / wiggleIntervalSeconds;
+
+    if (Math.round(wiggleCount) % 2 == 0) {
+      // if even number of wiggles, time to wiggle right
+      arcadeDrive(fwdSpeed, -wiggleRotationSpeed);
+    } else {
+      // if odd number, time to wiggle left
+      arcadeDrive(fwdSpeed, wiggleRotationSpeed);
+    }
+  }
+
+  public void stopWiggleDrive() {
+    m_startWiggleTime = 0;
+    arcadeDrive(0, 0);
+  }
+
+  public void arcadeDrive(double fwdSpeed, double rotationSpeed) {
     drive(fwdSpeed, 0, rotationSpeed, false, false);
   }
 

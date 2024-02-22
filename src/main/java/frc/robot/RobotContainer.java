@@ -82,12 +82,13 @@ public class RobotContainer {
     double slowDownFactor = 1.0;
     boolean fieldRelative = Constants.DriveConstants.kFieldRelative;
     if (m_driverController.getLeftY() > 0.3) {
-      fieldRelative = false; // meant to keep low pressure on the throttle stick? not field-relative anymore and moving slow
-      slowDownFactor = 0.3;
+      m_robotDrive.wiggleDrive(m_driverController.getRightY(), MathUtil.clamp(m_driverController.getLeftX(), -0.2, 0.2), 0.5 /* 0.5 seconds per wiggle */);
+      return;
     }
+
     if (m_driverController.getLeftY() < -0.3) {
       fieldRelative = false; // meant to keep high pressure on the throttle stick? not field-relative anymore but moving fast
-      slowDownFactor = 0.6;
+      slowDownFactor = 0.3;
     }
 
     // copter layoyt: right stick for movement, left stick for rotation
