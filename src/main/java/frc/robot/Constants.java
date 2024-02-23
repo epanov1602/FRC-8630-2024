@@ -268,45 +268,6 @@ public final class Constants {
   }
 
   /*
-   * Initial Shooter values used at startup
-   */
-  public static final class ShooterConstants {
-    // PID coefficients
-    public static final double initialP = 5e-5;
-    public static final double initialI = 1e-6;
-    public static final double initialD = 0;
-    public static final double initialIz = 0;
-    public static final double initialFF = 0.000156;
-    public static final double initialMaxOutput = 1;
-    public static final double initialMinOutput = -1;
-    public static final double initialMaxRPM = 5700;
-
-    // Smart Motion Coefficients
-    public static final double initialMaxVel = 2000; // rpm
-    public static final double initialMinVel = -2000; // rpm
-    public static final double initialMaxAcc = 2500;
-    public static final double initialAllowedError = .02;
-    public static final double initialMaxInches = 30;
-
-    private static final double chainPitch = 0.25; // inches
-    private static final int chainSprocket = 22; // teeth
-    private static final double sprocketCircumfrence = chainPitch * chainSprocket;
-    private static final double gearReduction = 15.0;
-    private static final double fudgeFactor = 0.80; // adjust using actual measurements
-    public static final double motorRevolutionsPerInch = (gearReduction / sprocketCircumfrence) * fudgeFactor;
-
-    public static enum TravelMode {
-      Velocity,
-      Position;
-
-      public static enum LimitSwich {
-        Forward,
-        Reverse
-      }
-    }
-  }
-
-  /*
    * Initial Arm values used at startup
    */
   public static final class ArmConstants {
@@ -325,7 +286,7 @@ public final class Constants {
     public static final double initialMinVel = -2000; // rpm
     public static final double initialMaxAcc = 2500;
     public static final double initialAllowedError = .02;
-    public static final double initialMaxAngle = +180;
+    public static final double initialMaxAngle = +110;
     public static final double initialMinAngle = 0;
 
     //chainPitch = 0.375; // 3/8 inches; #35 chain

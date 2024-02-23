@@ -23,7 +23,6 @@ import static frc.robot.Constants.ArmConstants.initialMinAngle;
 import static frc.robot.Constants.ArmConstants.initialMinOutput;
 import static frc.robot.Constants.ArmConstants.initialMinVel;
 import static frc.robot.Constants.ArmConstants.initialP;
-import static frc.robot.Constants.ArmConstants.motorRevolutionsPerDegree;
 
 import com.revrobotics.CANSparkBase.IdleMode;
 import com.revrobotics.CANSparkLowLevel.MotorType;
@@ -38,8 +37,8 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 
 public class SmartMotionArm extends SubsystemBase {
-  private CANSparkMax leadMotor; // left side
-  private CANSparkMax followMotor; // right side
+  private CANSparkMax leadMotor; // right side
+  private CANSparkMax followMotor; //  left side
   private SparkPIDController pidController;
   private SparkAbsoluteEncoder m_encoder; // through-bore connected to follow SparkMax
   private SparkLimitSwitch m_forwardLimit;
@@ -55,11 +54,15 @@ public class SmartMotionArm extends SubsystemBase {
   private static final double kEncoderVelocityFactor = 360 / 60; // degrees/second
 
   //use radians for position
-  // private static final double kEncoderPositionFactor = (2 * Math.PI); // radians
-  // private static final double kEncoderVelocityFactor = (2 * Math.PI) / 60.0;  // radians per second
+  //private static final double kEncoderPositionFactor = (2 * Math.PI); // radians
+  //private static final double kEncoderVelocityFactor = (2 * Math.PI) / 60.0;  // radians per second
 
   public double getAngleGoal() {
-    return angleGoal / 6;
+    return angleGoal;
+  }
+
+  public double getAngle() {
+    return m_encoder.getPosition();
   }
 
   /*
@@ -70,6 +73,7 @@ public class SmartMotionArm extends SubsystemBase {
     if (!IsAngleGoalValid(angle))
       return;
     angleGoal = angle;
+    pidController.setReference(angle, CANSparkMax.ControlType.kSmartMotion);
   }
 
   public boolean IsAngleGoalValid(double angle) {
@@ -83,23 +87,21 @@ public class SmartMotionArm extends SubsystemBase {
   public SmartMotionArm() {
     angleGoal = startingAngle;
     
-    leadMotor = new CANSparkMax(Constants.CANIDs.kArmMotorLeft, MotorType.kBrushless);
+    leadMotor = new CANSparkMax(Constants.CANIDs.kArmMotorRight, MotorType.kBrushless);
     leadMotor.restoreFactoryDefaults();
-    leadMotor.setInverted(false);
-    leadMotor.setIdleMode(IdleMode.kBrake);
+    leadMotor.setInverted(true);
+    leadMotor.setIdleMode(IdleMode.kCoast);
 
     m_forwardLimit = leadMotor.getForwardLimitSwitch(kNormallyOpen);
     m_reverseLimit = leadMotor.getReverseLimitSwitch(kNormallyOpen);
 
-    followMotor = new CANSparkMax(Constants.CANIDs.kArmMotorRight, MotorType.kBrushless);
+    followMotor = new CANSparkMax(Constants.CANIDs.kArmMotorLeft, MotorType.kBrushless);
     followMotor.restoreFactoryDefaults();
     followMotor.follow(leadMotor, true);
-    followMotor.setIdleMode(IdleMode.kBrake);
-    followMotor.setInverted(true);
-
+    
     // initialze PID controller and encoder objects
     pidController = leadMotor.getPIDController();
-    m_encoder = followMotor.getAbsoluteEncoder(Type.kDutyCycle);
+    m_encoder = leadMotor.getAbsoluteEncoder(Type.kDutyCycle);
 
     m_encoder.setPositionConversionFactor(kEncoderPositionFactor);
     m_encoder.setVelocityConversionFactor(kEncoderVelocityFactor);
@@ -132,6 +134,7 @@ public class SmartMotionArm extends SubsystemBase {
     pidController.setOutputRange(minOutput, maxOutput);
 
     int smartMotionSlot = 0;
+    pidController.setFeedbackDevice(m_encoder);
     pidController.setSmartMotionMaxVelocity(maxVel, smartMotionSlot);
     pidController.setSmartMotionMinOutputVelocity(minVel, smartMotionSlot);
     pidController.setSmartMotionMaxAccel(maxAcc, smartMotionSlot);
@@ -140,9 +143,6 @@ public class SmartMotionArm extends SubsystemBase {
 
   @Override
   public void periodic() {
-    double setPoint = getAngleGoal();
-    pidController.setReference(setPoint, CANSparkMax.ControlType.kSmartMotion);
-
     SmartDashboard.putNumber("angleSeen", m_encoder.getPosition());
     SmartDashboard.putNumber("angleWanted", getAngleGoal());
   }
