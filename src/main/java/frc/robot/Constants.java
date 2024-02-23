@@ -38,11 +38,11 @@ public final class Constants {
     public static final int kFrontRightTurningCanId = 7;
     public static final int kRearRightTurningCanId = 8;
 
-    public static final int kExtensionMotor = 9;
-    public static final int kIntakeMotor = 10;
-    public static final int kShooterMotorA = 11;
-    public static final int kArmMotor = 12;
-    public static final int kShooterMotorB = 13;
+    public static final int kIntakeMotor = 9;
+    public static final int kShooterMotorA = 10;
+    public static final int kShooterMotorB = 11;
+    public static final int kArmMotorLeft = 12;
+    public static final int kArmMotorRight = 13;
   }
 
   public final class OdometryConstants {
@@ -155,6 +155,8 @@ public final class Constants {
      * development.
      */
     public static final int kDriverControllerPort = 0;
+    public static final int kManipulatorController = 1; // second joystick for the manipulator control
+
     public static final double kDriveDeadband = 0.05;
   }
 
@@ -190,7 +192,7 @@ public final class Constants {
     public static final Rotation2d kPickupCameraImageRotation = Rotation2d.fromDegrees(-30);
     public static final String kPickupCameraName = "limelight-pickup";
     public static final int kNotePipelineIndex = 9;
-  };
+  }
 
   public static final class NeoMotorConstants {
     public static final double kFreeSpeedRpm = 5676;
@@ -258,6 +260,7 @@ public final class Constants {
     public static enum TravelMode {
       Velocity,
       Position;
+    }
 
     public static enum LimitSwich {
       Forward,
@@ -304,6 +307,5 @@ public final class Constants {
       Reverse
     }
   }
-}
 
 }
