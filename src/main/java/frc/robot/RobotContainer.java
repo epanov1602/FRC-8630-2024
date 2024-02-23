@@ -57,8 +57,13 @@ public class RobotContainer {
   private static DriveSubsystem m_robotDrive = new DriveSubsystem();
   private static LimelightCamera m_pickupCamera = new LimelightCamera(CameraConstants.kPickupCameraName);
 
+  private Intake m_intake = new Intake(); // TODO: once arm and shooter are integrated, maybe make a composite manipulator subsystem out of them?
+
   // The driver's controller
   private XboxController m_driverController = new XboxController(OIConstants.kDriverControllerPort);
+
+  // The manipulator's controller
+  private XboxController m_manipulatorController = new XboxController(OIConstants.kManipulatorController);
 
   /**
    * The container for the robot. Contains subsystems, OI devices, and commands.
@@ -116,6 +121,9 @@ public class RobotContainer {
    * {@link JoystickButton}.
    */
   private void configureButtonBindings() {
+    new JoystickButton(m_manipulatorController, Button.kA.value).onTrue(new IntakeNote(m_intake));
+    new JoystickButton(m_manipulatorController, Button.kX.value).onTrue(new EjectNote(m_intake));
+
     Command resetOdometry = new ResetOdometry(m_robotDrive);
     JoystickButton btnY = new JoystickButton(m_driverController, Button.kY.value);
     btnY.onTrue(resetOdometry);
