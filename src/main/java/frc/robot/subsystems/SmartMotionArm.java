@@ -1,51 +1,74 @@
 /**
- * 000 degrees is horizontal forward
- * 090 degrees is straight up
- * 180 degrees is horizontal backwards
- * 270 degrees is straight down
+ * +090 degrees is straight up
+ *  000 degrees is horizontal forward
+ * +180 degrees is horizontal backwards
  * 
- * 000 - 290 never legal
- * 290 - 360: subtract 360
+ * > +180 never legal
+ * <  000 never legal
  */
 package frc.robot.subsystems;
 
-import static com.revrobotics.SparkMaxLimitSwitch.Type.kNormallyOpen;
-import static frc.robot.Constants.ArmConstants.*;
+import static com.revrobotics.SparkLimitSwitch.Type.kNormallyOpen;
+import static frc.robot.Constants.ArmConstants.initialAllowedError;
+import static frc.robot.Constants.ArmConstants.initialD;
+import static frc.robot.Constants.ArmConstants.initialFF;
+import static frc.robot.Constants.ArmConstants.initialI;
+import static frc.robot.Constants.ArmConstants.initialIz;
+import static frc.robot.Constants.ArmConstants.initialMaxAcc;
+import static frc.robot.Constants.ArmConstants.initialMaxAngle;
+import static frc.robot.Constants.ArmConstants.initialMaxOutput;
+import static frc.robot.Constants.ArmConstants.initialMaxRPM;
+import static frc.robot.Constants.ArmConstants.initialMaxVel;
+import static frc.robot.Constants.ArmConstants.initialMinAngle;
+import static frc.robot.Constants.ArmConstants.initialMinOutput;
+import static frc.robot.Constants.ArmConstants.initialMinVel;
+import static frc.robot.Constants.ArmConstants.initialP;
+import static frc.robot.Constants.ArmConstants.motorRevolutionsPerDegree;
 
-import com.revrobotics.CANSparkMax;
+import com.revrobotics.CANSparkBase.IdleMode;
 import com.revrobotics.CANSparkLowLevel.MotorType;
-import com.revrobotics.RelativeEncoder;
+import com.revrobotics.CANSparkMax;
+import com.revrobotics.SparkAbsoluteEncoder;
 import com.revrobotics.SparkLimitSwitch;
 import com.revrobotics.SparkPIDController;
-import com.revrobotics.CANSparkBase.IdleMode;
+import com.revrobotics.SparkAbsoluteEncoder.Type;
 
-//import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
-import frc.robot.Constants.ArmConstants.TravelMode;
-import pabeles.concurrency.IntOperatorTask.Min;
 
 public class SmartMotionArm extends SubsystemBase {
-  private CANSparkMax motor;
+  private CANSparkMax leadMotor; // left side
+  private CANSparkMax followMotor; // right side
   private SparkPIDController pidController;
-  private RelativeEncoder m_encoder;
+  private SparkAbsoluteEncoder m_encoder; // through-bore connected to follow SparkMax
   private SparkLimitSwitch m_forwardLimit;
   private SparkLimitSwitch m_reverseLimit;
   public double kP, kI, kD, kIz, kFF, maxOutput, minOutput, maxRPM, maxVel, minVel, maxAcc, allowedErr, maxAngle,
       minAngle;
   private double angleGoal;
-  private double startingAngle = 74.0;//-17; // real is about 74
+  private double startingAngle = 0; // straight up
+  private boolean kEncoderInverted = false;
+
+  //use degrees for position
+  private static final double kEncoderPositionFactor = 360; // degrees
+  private static final double kEncoderVelocityFactor = 360 / 60; // degrees/second
+
+  //use radians for position
+  // private static final double kEncoderPositionFactor = (2 * Math.PI); // radians
+  // private static final double kEncoderVelocityFactor = (2 * Math.PI) / 60.0;  // radians per second
 
   public double getAngleGoal() {
-    return angleGoal;
+    return angleGoal / 6;
   }
 
   /*
    * Set the position goal in angle, >= 0
    */
   public void setAngleGoal(double angle) {
-    //("setAngleGoal:" + angle);
-    if (!IsAngleGoalValid(angle)) return;
+    System.out.println("setAngleGoal:" + angle);
+    if (!IsAngleGoalValid(angle))
+      return;
     angleGoal = angle;
   }
 
@@ -59,20 +82,28 @@ public class SmartMotionArm extends SubsystemBase {
 
   public SmartMotionArm() {
     angleGoal = startingAngle;
-    motor = new CANSparkMax(Constants.CANIDs.kArmMotor, MotorType.kBrushless);
-    motor.restoreFactoryDefaults();
-    motor.setInverted(false);
-    motor.setIdleMode(IdleMode.kBrake);
+    
+    leadMotor = new CANSparkMax(Constants.CANIDs.kArmMotorLeft, MotorType.kBrushless);
+    leadMotor.restoreFactoryDefaults();
+    leadMotor.setInverted(false);
+    leadMotor.setIdleMode(IdleMode.kBrake);
 
-    m_forwardLimit = motor.getForwardLimitSwitch(kNormallyOpen);
-    m_reverseLimit = motor.getReverseLimitSwitch(kNormallyOpen);
-    m_forwardLimit.enableLimitSwitch(true);
-    m_reverseLimit.enableLimitSwitch(true);
+    m_forwardLimit = leadMotor.getForwardLimitSwitch(kNormallyOpen);
+    m_reverseLimit = leadMotor.getReverseLimitSwitch(kNormallyOpen);
+
+    followMotor = new CANSparkMax(Constants.CANIDs.kArmMotorRight, MotorType.kBrushless);
+    followMotor.restoreFactoryDefaults();
+    followMotor.follow(leadMotor, true);
+    followMotor.setIdleMode(IdleMode.kBrake);
+    followMotor.setInverted(true);
 
     // initialze PID controller and encoder objects
-    pidController = motor.getPIDController();
-    m_encoder = motor.getEncoder();
-    resetEncoders();
+    pidController = leadMotor.getPIDController();
+    m_encoder = followMotor.getAbsoluteEncoder(Type.kDutyCycle);
+
+    m_encoder.setPositionConversionFactor(kEncoderPositionFactor);
+    m_encoder.setVelocityConversionFactor(kEncoderVelocityFactor);
+    m_encoder.setInverted(kEncoderInverted);
 
     // PID coefficients
     kP = initialP;
@@ -108,32 +139,16 @@ public class SmartMotionArm extends SubsystemBase {
   }
 
   @Override
-  public void periodic() { 
-    double setPoint = getAngleGoal() * motorRevolutionsPerDegree;
+  public void periodic() {
+    double setPoint = getAngleGoal();
     pidController.setReference(setPoint, CANSparkMax.ControlType.kSmartMotion);
-  }
 
-  /*
-   * Must be called before using arm, preferably from robotInit.
-   */
-  public void initialize() {
-    FindHome();
-  }
-
-  /*
-   * Moves onto the Home switch and just off of it
-   */
-  public void FindHome() {
+    SmartDashboard.putNumber("angleSeen", m_encoder.getPosition());
+    SmartDashboard.putNumber("angleWanted", getAngleGoal());
   }
 
   public void Stop() {
-    motor.stopMotor();
-  }
-
-  public void enable() {
-  }
-
-  public void disable() {
+    leadMotor.stopMotor();
   }
 
   /**
@@ -142,26 +157,8 @@ public class SmartMotionArm extends SubsystemBase {
    * @return boolean[]{Fwd, Rev}
    */
   public boolean[] getLimitSwitches() {
-    // return new boolean[] { m_forwardLimit.isPressed(), m_reverseLimit.isPressed()
-    // };
-    return new boolean[] { false, false };
+    return new boolean[] { m_forwardLimit.isPressed(), m_reverseLimit.isPressed()};
   }
 
-  public void resetEncoders() {
-    m_encoder.setPosition(startingAngle * motorRevolutionsPerDegree);
-  }
-
-  /**
-   * @return current angle in radians
-   */
-  public double getCurrentRadians() {
-    return getCurrentDegrees() * Math.PI / 180;
-  }
-
-  /**
-   * @return current angle in radians
-   */
-  public double getCurrentDegrees() {
-    return (m_encoder.getPosition() / motorRevolutionsPerDegree);
-  }
 }
+
