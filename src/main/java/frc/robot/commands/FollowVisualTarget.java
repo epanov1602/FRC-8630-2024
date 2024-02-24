@@ -110,10 +110,7 @@ public class FollowVisualTarget extends Command {
       if (Math.abs(degreesLeftToTurn) < Constants.AutoConstants.kDirectionToleranceDegrees)
         turningSpeed = 0;
 
-      // should we really be moving towards it?
-      m_drivetrain.drive(forwardSpeed, 0, turningSpeed, false, true);
-
-      // are we finished
+      // are we finished?
       if (m_whenToFinish.m_maxTargetSize > 0 && m_camera.getA() > m_whenToFinish.m_maxTargetSize)
         m_timeToStop = true;
       if (m_whenToFinish.m_maxTargetY != 0 && m_camera.getY() > m_whenToFinish.m_maxTargetY)
@@ -122,6 +119,8 @@ public class FollowVisualTarget extends Command {
         m_timeToStop = true;
       if (forwardSpeed == 0 && turningSpeed == 0 && m_whenToFinish.m_finishIfNotMoving)
         m_timeToStop = true;
+
+      m_drivetrain.drive(forwardSpeed, 0, turningSpeed, false, true);
     }
   }
 

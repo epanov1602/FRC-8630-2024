@@ -50,6 +50,7 @@ public class RobotContainer {
   // The robot's subsystems
   private static DriveSubsystem m_robotDrive = new DriveSubsystem();
   private static LimelightCamera m_pickupCamera = new LimelightCamera(CameraConstants.kPickupCameraName);
+  private static LimelightCamera m_aimingCamera = new LimelightCamera(CameraConstants.kAimingCameraName);
 
   // The driver's controller
   private XboxController m_driverController = new XboxController(OIConstants.kDriverControllerPort);
@@ -128,7 +129,7 @@ public class RobotContainer {
     Command aimToTag = new FollowVisualTarget(
       m_robotDrive, m_pickupCamera, 9, 0.1, 0.6,
       CameraConstants.kPickupCameraImageRotation,
-      new FollowVisualTarget.WhenToFinish(-14, 0, 0, true));
+      new FollowVisualTarget.WhenToFinish(-17, 0, 0, true));
     JoystickButton btnA = new JoystickButton(m_driverController, Button.kA.value);
     btnA.onTrue(aimToTag);
 
