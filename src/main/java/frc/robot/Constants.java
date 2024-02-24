@@ -272,7 +272,7 @@ public final class Constants {
    */
   public static final class ArmConstants {
     // PID coefficients
-    public static final double initialP = 20e-5;
+    public static final double initialP = 10e-5;
     public static final double initialI = 0; // 1e-6;
     public static final double initialD = 0;
     public static final double initialIz = 0;

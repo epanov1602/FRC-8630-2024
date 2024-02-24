@@ -90,7 +90,7 @@ public class SmartMotionArm extends SubsystemBase {
     leadMotor = new CANSparkMax(Constants.CANIDs.kArmMotorRight, MotorType.kBrushless);
     leadMotor.restoreFactoryDefaults();
     leadMotor.setInverted(true);
-    leadMotor.setIdleMode(IdleMode.kCoast);
+    leadMotor.setIdleMode(IdleMode.kBrake);
 
     m_forwardLimit = leadMotor.getForwardLimitSwitch(kNormallyOpen);
     m_reverseLimit = leadMotor.getReverseLimitSwitch(kNormallyOpen);
@@ -98,6 +98,7 @@ public class SmartMotionArm extends SubsystemBase {
     followMotor = new CANSparkMax(Constants.CANIDs.kArmMotorLeft, MotorType.kBrushless);
     followMotor.restoreFactoryDefaults();
     followMotor.follow(leadMotor, true);
+    followMotor.setIdleMode(IdleMode.kBrake);
     
     // initialze PID controller and encoder objects
     pidController = leadMotor.getPIDController();
