@@ -191,7 +191,10 @@ public final class Constants {
     public static final Rotation2d kPickupCameraImageRotation = Rotation2d.fromDegrees(0); // should be -30 for camera mounted above the left swerve module 
     public static final String kPickupCameraName = "limelight-pickup";
     public static final String kAimingCameraName = "limelight-aiming";
+
     public static final int kNotePipelineIndex = 9;
+    public static final double kNoteApproachSpeed = 0.6;
+    public static final double kNoteApproachRotationSpeed = 0.1;
   }
 
   public static final class NeoMotorConstants {
@@ -270,7 +273,7 @@ public final class Constants {
     public static final double initialMaxAcc = 2500;
     public static final double initialAllowedError = .02;
     public static final double initialMaxAngle = +110;
-    public static final double initialMinAngle = 0;
+    public static final double initialMinAngle = +5; // good angle for picking up
 
     //chainPitch = 0.375; // 3/8 inches; #35 chain
     private static final double chainSprocket = 60; // teeth

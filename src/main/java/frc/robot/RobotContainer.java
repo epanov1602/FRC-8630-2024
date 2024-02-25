@@ -34,7 +34,7 @@ import frc.robot.commands.ResetOdometry;
 import frc.robot.subsystems.DriveSubsystem;
 import frc.robot.subsystems.LimelightCamera;
 import frc.robot.subsystems.SmartMotionArm;
-
+import frc.robot.subsystems.SmartMotionShooter;
 import frc.robot.commands.EjectNote;
 import frc.robot.commands.IntakeNote;
 import frc.robot.subsystems.Intake;
@@ -46,6 +46,7 @@ import edu.wpi.first.wpilibj2.command.ParallelRaceGroup;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.SwerveControllerCommand;
+import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 import java.util.List;
 
@@ -59,16 +60,14 @@ public class RobotContainer {
   // The robot's subsystems
   private static DriveSubsystem m_robotDrive = new DriveSubsystem();
   private static LimelightCamera m_pickupCamera = new LimelightCamera(CameraConstants.kPickupCameraName);
-  private SmartMotionArm m_arm = new SmartMotionArm();
   private static LimelightCamera m_aimingCamera = new LimelightCamera(CameraConstants.kAimingCameraName);
 
+  private SmartMotionArm m_arm = new SmartMotionArm();
+  private SmartMotionShooter m_shooter = new SmartMotionShooter();
   private Intake m_intake = new Intake(); // TODO: once arm and shooter are integrated, maybe make a composite manipulator subsystem out of them?
 
-  // The driver's controller
-  private XboxController m_driverController = new XboxController(OIConstants.kDriverControllerPort);
-
-  // The manipulator's controller
-  private XboxController m_manipulatorController = new XboxController(OIConstants.kManipulatorController);
+  private CommandXboxController m_driverController = new CommandXboxController(OIConstants.kDriverControllerPort);
+  //private CommandXboxController m_manipulatorController = new CommandXboxController(OIConstants.kManipulatorController);
 
   /**
    * The container for the robot. Contains subsystems, OI devices, and commands.
@@ -126,48 +125,34 @@ public class RobotContainer {
    * {@link JoystickButton}.
    */
   private void configureButtonBindings() {
-    new JoystickButton(m_manipulatorController, Button.kA.value).onTrue(new IntakeNote(m_intake));
-    new JoystickButton(m_manipulatorController, Button.kX.value).onTrue(new EjectNote(m_intake));
+    m_driverController.povDown().onTrue(new IntakeNote(m_intake, m_arm, m_robotDrive));
+    m_driverController.povUp().onTrue(m_arm.runOnce(() -> m_arm.setAngleGoal(60)));
+    m_driverController.povLeft().onTrue(new EjectNote(m_intake, 0.5));
 
     Command resetOdometry = new ResetOdometry(m_robotDrive);
-    JoystickButton btnY = new JoystickButton(m_driverController, Button.kY.value);
-    btnY.onTrue(resetOdometry.andThen(new DropArmForPickup(m_arm)));
-
-    JoystickButton btnX = new JoystickButton(m_driverController, Button.kX.value);
-    btnX.onTrue(m_arm.runOnce(() -> m_arm.setAngleGoal(60)));
-
+    m_driverController.button(Button.kY.value).onTrue(resetOdometry);
+  
     Command goBack = new SwerveToPoint(m_robotDrive, 0, 0, 0, false);
-    JoystickButton btnB = new JoystickButton(m_driverController, Button.kB.value);
-    btnB.onTrue(goBack.until(this::operatorUsingSticks));
+    m_driverController.button(Button.kB.value).onTrue(goBack.until(this::operatorUsingSticks));
 
-    Command aimToTag = new FollowVisualTarget(
-      m_robotDrive, m_pickupCamera, 9, 0.1, 0.6,
-      CameraConstants.kPickupCameraImageRotation,
+    Command approachNote = new FollowVisualTarget(
+      m_robotDrive, m_pickupCamera, CameraConstants.kNotePipelineIndex,
+      CameraConstants.kNoteApproachSpeed, CameraConstants.kNoteApproachRotationSpeed, CameraConstants.kPickupCameraImageRotation,
       new FollowVisualTarget.WhenToFinish(-17, 0, 0, true));
-    JoystickButton btnA = new JoystickButton(m_driverController, Button.kA.value);
-    btnA.onTrue(aimToTag);
+    m_driverController.button(Button.kB.value).onTrue(approachNote);
 
     // a slightly bigger command: return while hugging the left side of the field
-
-    Command retreatUsingLeftSideOfTheField = new SwerveTrajectoryToPoint(
-      m_robotDrive,
-      List.of(
-        new Translation2d(0.25, 0.0),
-        new Translation2d(0.5, 0.0),
-        new Translation2d(0.75, 0.0),
-        new Translation2d(1.0, 0.0),
-        new Translation2d(1.25, 0.0),
-        new Translation2d(1.375, 1.0),
-        new Translation2d(1.5, 1.5),
-        new Translation2d(1.75, 1.5)
-      ),
-      new Pose2d(2, 1.5, Rotation2d.fromDegrees(-90)));
-    JoystickButton btnLeftBumper = new JoystickButton(m_driverController, Button.kLeftBumper.value);    
-    btnLeftBumper.onTrue(retreatUsingLeftSideOfTheField);
+    Command retreatUsingLeftSideOfTheField = getRetreatUsingLeftSideOfTheFieldCommand();
+    m_driverController.button(Button.kLeftBumper.value).onTrue(retreatUsingLeftSideOfTheField);
 
     // and even bigger: a command run around until gamepiece (note) is acquired on camera, and then approach that note and pick up
 
     // -- part 0: start detecting gamepiece target (note)
+    Command findAndApproachSafely = getFindAndApproachSafelyCommand();
+    m_driverController.button(Button.kLeftBumper.value).onTrue(findAndApproachSafely);
+  }
+
+  private Command getFindAndApproachSafelyCommand() {
     var switchToDetectingNote = new SwitchVisualTarget(m_pickupCamera, CameraConstants.kNotePipelineIndex);
 
     // -- part 1: running around until target detected reliably
@@ -208,9 +193,24 @@ public class RobotContainer {
 
     // (but make it interruptible by operator touching sticks to take control)
     var findAndApproachSafely = findAndApproachTarget.until(this::operatorUsingSticks);
+    return findAndApproachSafely;
+  }
 
-    JoystickButton btnRightBumper = new JoystickButton(m_driverController, Button.kRightBumper.value);    
-    btnRightBumper.onTrue(findAndApproachSafely);
+  private Command getRetreatUsingLeftSideOfTheFieldCommand() {
+    Command retreatUsingLeftSideOfTheField = new SwerveTrajectoryToPoint(
+      m_robotDrive,
+      List.of(
+        new Translation2d(0.25, 0.0),
+        new Translation2d(0.5, 0.0),
+        new Translation2d(0.75, 0.0),
+        new Translation2d(1.0, 0.0),
+        new Translation2d(1.25, 0.0),
+        new Translation2d(1.375, 1.0),
+        new Translation2d(1.5, 1.5),
+        new Translation2d(1.75, 1.5)
+      ),
+      new Pose2d(2, 1.5, Rotation2d.fromDegrees(-90)));
+    return retreatUsingLeftSideOfTheField;
   }
 
   private boolean operatorUsingSticks() {

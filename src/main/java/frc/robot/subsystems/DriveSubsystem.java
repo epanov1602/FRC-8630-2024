@@ -63,10 +63,10 @@ public class DriveSubsystem extends SubsystemBase {
   private double m_prevTime = WPIUtilJNI.now() * 1e-6;
 
   // Odometry class for tracking robot pose
-  public final SwerveDriveOdometry m_odometry;
+  private final SwerveDriveOdometry m_odometry;
 
   // Wiggle drive time
-  public double m_startWiggleTime = 0;
+  private double m_startWiggleTime = 0;
 
   /**
    * X speed sent to the SparkMax AFTER limiting
@@ -180,17 +180,19 @@ public class DriveSubsystem extends SubsystemBase {
 
     // how many wiggles have we done already?
     double wiggleCount = (Timer.getFPGATimestamp() - m_startWiggleTime) / wiggleIntervalSeconds;
-
-    if (Math.round(wiggleCount) % 2 == 0) {
-      // if even number of wiggles, time to wiggle right
+    if (wiggleCount < 1) {
+      // first we try without rotation
+      arcadeDrive(fwdSpeed, 0);
+    } else if (Math.round(wiggleCount) % 2 == 0) {
+      // then if we made number of wiggles, time to wiggle right
       arcadeDrive(fwdSpeed, -wiggleRotationSpeed);
     } else {
-      // if odd number, time to wiggle left
+      // otherwise if we made odd number of wiggles, time to wiggle left
       arcadeDrive(fwdSpeed, wiggleRotationSpeed);
     }
   }
 
-  public void stopWiggleDrive() {
+  public void resetWiggleDrive() {
     m_startWiggleTime = 0;
     arcadeDrive(0, 0);
   }

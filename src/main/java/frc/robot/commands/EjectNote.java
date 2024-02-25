@@ -9,19 +9,22 @@ import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.subsystems.Intake;
 
 public class EjectNote extends Command {
-  private Intake m_intake; // TODO: later replace with Manipulator, which would contain an intake
+  private final Intake m_intake; // TODO: later replace with Manipulator, which would contain an intake
+  private final double m_speed;
+
   private double m_startTime = 0;
 
   /** Creates a new DiscardNote. */
-  public EjectNote(Intake intake) {
+  public EjectNote(Intake intake, double speed) {
     m_intake = intake;
+    m_speed = speed;
     addRequirements(intake);
   }
 
   // Called when the command is initially scheduled.
   @Override
   public void initialize() {
-    m_intake.ejectNote();
+    m_intake.ejectNote(m_speed);
     m_startTime = Timer.getFPGATimestamp();
   }
 

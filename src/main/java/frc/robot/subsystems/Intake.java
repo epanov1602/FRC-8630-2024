@@ -65,9 +65,13 @@ public class Intake extends SubsystemBase {
   /**
    * Enable the limit switch and turn on motor forward
    */
-  public void ejectNote(){
+  public void ejectNote(double speed){
+    if (speed < 0.1)
+      speed = 0.1;
+    if (speed > 1.0)
+      speed = 1.0;
     m_forwardLimit.enableLimitSwitch(false);
-    setSpeed(-0.5);
+    setSpeed(-speed);
   }
 
   /**
