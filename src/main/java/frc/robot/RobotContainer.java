@@ -20,6 +20,7 @@ import frc.robot.Constants.AutoConstants;
 import frc.robot.Constants.CameraConstants;
 import frc.robot.Constants.DriveConstants;
 import frc.robot.Constants.OIConstants;
+
 import frc.robot.Constants.OdometryConstants;
 import frc.robot.commands.AimToDirection;
 import frc.robot.commands.FollowVisualTarget;
@@ -31,6 +32,11 @@ import frc.robot.commands.MockPickupCommand;
 import frc.robot.commands.ResetOdometry;
 import frc.robot.subsystems.DriveSubsystem;
 import frc.robot.subsystems.LimelightCamera;
+
+import frc.robot.commands.EjectNote;
+import frc.robot.commands.IntakeNote;
+import frc.robot.subsystems.Intake;
+
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.ParallelRaceGroup;
@@ -52,8 +58,13 @@ public class RobotContainer {
   private static LimelightCamera m_pickupCamera = new LimelightCamera(CameraConstants.kPickupCameraName);
   private static LimelightCamera m_aimingCamera = new LimelightCamera(CameraConstants.kAimingCameraName);
 
+  private Intake m_intake = new Intake(); // TODO: once arm and shooter are integrated, maybe make a composite manipulator subsystem out of them?
+
   // The driver's controller
   private XboxController m_driverController = new XboxController(OIConstants.kDriverControllerPort);
+
+  // The manipulator's controller
+  private XboxController m_manipulatorController = new XboxController(OIConstants.kManipulatorController);
 
   /**
    * The container for the robot. Contains subsystems, OI devices, and commands.
@@ -111,6 +122,9 @@ public class RobotContainer {
    * {@link JoystickButton}.
    */
   private void configureButtonBindings() {
+    new JoystickButton(m_manipulatorController, Button.kA.value).onTrue(new IntakeNote(m_intake));
+    new JoystickButton(m_manipulatorController, Button.kX.value).onTrue(new EjectNote(m_intake));
+
     Command resetOdometry = new ResetOdometry(m_robotDrive);
     JoystickButton btnY = new JoystickButton(m_driverController, Button.kY.value);
     btnY.onTrue(resetOdometry);
