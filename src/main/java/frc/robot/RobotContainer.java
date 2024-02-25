@@ -23,6 +23,7 @@ import frc.robot.Constants.OIConstants;
 
 import frc.robot.Constants.OdometryConstants;
 import frc.robot.commands.AimToDirection;
+import frc.robot.commands.DropArmForPickup;
 import frc.robot.commands.FollowVisualTarget;
 import frc.robot.commands.SwerveToPoint;
 import frc.robot.commands.SwerveTrajectoryToPoint;
@@ -32,6 +33,7 @@ import frc.robot.commands.MockPickupCommand;
 import frc.robot.commands.ResetOdometry;
 import frc.robot.subsystems.DriveSubsystem;
 import frc.robot.subsystems.LimelightCamera;
+import frc.robot.subsystems.SmartMotionArm;
 
 import frc.robot.commands.EjectNote;
 import frc.robot.commands.IntakeNote;
@@ -40,6 +42,7 @@ import frc.robot.subsystems.Intake;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.ParallelRaceGroup;
+
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.SwerveControllerCommand;
@@ -56,6 +59,7 @@ public class RobotContainer {
   // The robot's subsystems
   private static DriveSubsystem m_robotDrive = new DriveSubsystem();
   private static LimelightCamera m_pickupCamera = new LimelightCamera(CameraConstants.kPickupCameraName);
+  private SmartMotionArm m_arm = new SmartMotionArm();
   private static LimelightCamera m_aimingCamera = new LimelightCamera(CameraConstants.kAimingCameraName);
 
   private Intake m_intake = new Intake(); // TODO: once arm and shooter are integrated, maybe make a composite manipulator subsystem out of them?
@@ -127,18 +131,14 @@ public class RobotContainer {
 
     Command resetOdometry = new ResetOdometry(m_robotDrive);
     JoystickButton btnY = new JoystickButton(m_driverController, Button.kY.value);
-    btnY.onTrue(resetOdometry);
+    btnY.onTrue(resetOdometry.andThen(new DropArmForPickup(m_arm)));
 
-    Command goNorth = new SequentialCommandGroup(
-        new SwerveToPoint(m_robotDrive, 1, 0, 0, true),
-        new SwerveToPoint(m_robotDrive, 2, 1, 90, false));
-    Command goNorthSafely = goNorth.until(this::operatorUsingSticks);
     JoystickButton btnX = new JoystickButton(m_driverController, Button.kX.value);
-    btnX.onTrue(goNorthSafely);
+    btnX.onTrue(m_arm.runOnce(() -> m_arm.setAngleGoal(60)));
 
     Command goBack = new SwerveToPoint(m_robotDrive, 0, 0, 0, false);
     JoystickButton btnB = new JoystickButton(m_driverController, Button.kB.value);
-    btnB.onTrue(goBack);
+    btnB.onTrue(goBack.until(this::operatorUsingSticks));
 
     Command aimToTag = new FollowVisualTarget(
       m_robotDrive, m_pickupCamera, 9, 0.1, 0.6,

@@ -75,7 +75,6 @@ public final class Constants {
     public static final double kMagnitudeSlewRate = 1.8; // percent per second (1 = 100%)
     public static final double kRotationalSlewRate = 2.0; // percent per second (1 = 100%)
 
-
     public static final SwerveDriveKinematics kDriveKinematics = new SwerveDriveKinematics(
         new Translation2d(kWheelBase / 2, kTrackWidth / 2),
         new Translation2d(kWheelBase / 2, -kTrackWidth / 2),
@@ -256,11 +255,11 @@ public final class Constants {
    */
   public static final class ArmConstants {
     // PID coefficients
-    public static final double initialP = 5e-5;
-    public static final double initialI = 1e-6;
+    public static final double initialP = 10e-5;
+    public static final double initialI = 0; // 1e-6;
     public static final double initialD = 0;
     public static final double initialIz = 0;
-    public static final double initialFF = 0.000156;
+    public static final double initialFF = 0; // 0.000156;
     public static final double initialMaxOutput = 1;
     public static final double initialMinOutput = -1;
     public static final double initialMaxRPM = 5700;
@@ -270,20 +269,16 @@ public final class Constants {
     public static final double initialMinVel = -2000; // rpm
     public static final double initialMaxAcc = 2500;
     public static final double initialAllowedError = .02;
-    public static final double initialMaxAngle = 74;
-    public static final double initialMinAngle = -45;
+    public static final double initialMaxAngle = +110;
+    public static final double initialMinAngle = 0;
 
-    private static final double chainPitch = 0.25; // inches
-    private static final int chainSprocket = 22; // teeth
-    private static final double sprocketCircumfrence = chainPitch * chainSprocket;
-    private static final double gearReduction = 15.0;
-    private static final double fudgeFactor = 0.75; // empirical
-    public static final double motorRevolutionsPerDegree = gearReduction / sprocketCircumfrence * fudgeFactor;
-
-    public static enum TravelMode {
-      Velocity,
-      Position;
-    }
+    //chainPitch = 0.375; // 3/8 inches; #35 chain
+    private static final double chainSprocket = 60; // teeth
+    private static final double driveSprocket = 14; // teeth
+    private static final double gearReduction = 12.0;
+    private static final double chainReduction = chainSprocket / driveSprocket;
+    private static final double fudgeFactor = 1; // empirical
+    public static final double motorRevolutionsPerDegree = gearReduction * chainReduction / 360 * fudgeFactor;   
 
     public static enum LimitSwich {
       Forward,
