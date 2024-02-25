@@ -57,15 +57,15 @@ import java.util.List;
  * (including subsystems, commands, and button mappings) should be declared here.
  */
 public class RobotContainer {
-  // The robot's subsystems
+  // all robot's subsystems
   private static DriveSubsystem m_robotDrive = new DriveSubsystem();
   private static LimelightCamera m_pickupCamera = new LimelightCamera(CameraConstants.kPickupCameraName);
   private static LimelightCamera m_aimingCamera = new LimelightCamera(CameraConstants.kAimingCameraName);
-
   private SmartMotionArm m_arm = new SmartMotionArm();
   private SmartMotionShooter m_shooter = new SmartMotionShooter();
   private Intake m_intake = new Intake(); // TODO: once arm and shooter are integrated, maybe make a composite manipulator subsystem out of them?
 
+  // all teleop controllers
   private CommandXboxController m_driverController = new CommandXboxController(OIConstants.kDriverControllerPort);
   //private CommandXboxController m_manipulatorController = new CommandXboxController(OIConstants.kManipulatorController);
 
@@ -94,19 +94,21 @@ public class RobotContainer {
   }
 
   private void copterJoystickDrive() {
-    double slowDownFactor = 1.0;
-    boolean fieldRelative = Constants.DriveConstants.kFieldRelative;
+    // if the left stick is down, wiggle drive
     if (m_driverController.getLeftY() > 0.3) {
-      m_robotDrive.wiggleDrive(m_driverController.getRightY(), MathUtil.clamp(m_driverController.getLeftX(), -0.2, 0.2), 0.5 /* 0.5 seconds per wiggle */);
+      m_robotDrive.wiggleDrive(m_driverController.getRightY(), 0.2, 0.5); // 0.2 rotation speed, 0.5 seconds per wiggle
       return;
     }
 
+    // if keeping high pressure on the throttle stick, not field-relative anymore (for manual aiming)
+    double slowDownFactor = 1.0;
+    boolean fieldRelative = Constants.DriveConstants.kFieldRelative;
     if (m_driverController.getLeftY() < -0.3) {
-      fieldRelative = false; // meant to keep high pressure on the throttle stick? not field-relative anymore but moving fast
+      fieldRelative = false;
       slowDownFactor = 0.3;
     }
 
-    // copter layoyt: right stick for movement, left stick for rotation
+    // copter layoyt otherwise: right stick for movement, left stick for rotation
     m_robotDrive.drive(
         -MathUtil.applyDeadband(m_driverController.getRightY() * slowDownFactor, OIConstants.kDriveDeadband),
         -MathUtil.applyDeadband(m_driverController.getRightX() * slowDownFactor, OIConstants.kDriveDeadband),

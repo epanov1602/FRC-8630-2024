@@ -197,6 +197,10 @@ public class DriveSubsystem extends SubsystemBase {
     arcadeDrive(0, 0);
   }
 
+  public void arcadeDrive(double fwdSpeed, double rotationSpeed, boolean rateLimitForManual) {
+    drive(fwdSpeed, 0, rotationSpeed, false, rateLimitForManual);
+  }
+
   public void arcadeDrive(double fwdSpeed, double rotationSpeed) {
     drive(fwdSpeed, 0, rotationSpeed, false, false);
   }
@@ -206,19 +210,25 @@ public class DriveSubsystem extends SubsystemBase {
    *
    * @param xSpeed        Speed of the robot in the x direction (forward).
    * @param ySpeed        Speed of the robot in the y direction (sideways).
-   * @param rot           Angular rate of the robot.
+   * @param rotSpeed      Angular rate of the robot.
    * @param fieldRelative Whether the provided x and y speeds are relative to the
    *                      field.
-   * @param rateLimit     Whether to enable rate limiting for smoother control.
+   * @param rateLimitForManual     Whether to enable rate limiting for smoother control.
    */
-  public void drive(double xSpeed, double ySpeed, double rot, boolean fieldRelative, boolean rateLimit) {
+  public void drive(double xSpeed, double ySpeed, double rotSpeed, boolean fieldRelative, boolean rateLimitForManual) {
+
+    // if manual, then square the inputs
+    if (rateLimitForManual) {
+      xSpeed = xSpeed * xSpeed * Math.signum(xSpeed);
+      ySpeed = ySpeed * ySpeed * Math.signum(ySpeed);
+      rotSpeed = rotSpeed * rotSpeed * Math.signum(rotSpeed);
+    }
 
     this.xSpeedRequested = xSpeed;
     this.ySpeedRequested = ySpeed;
-    this.requestedRotation = rot;
-    this.rateLimit = rateLimit;
+    this.requestedRotation = rotSpeed;
 
-    if (rateLimit) {
+    if (rateLimitForManual) {
       // Convert XY to polar for rate limiting
       double inputTranslationDir = Math.atan2(ySpeed, xSpeed);
       double inputTranslationMag = Math.sqrt(Math.pow(xSpeed, 2) + Math.pow(ySpeed, 2));
@@ -256,12 +266,12 @@ public class DriveSubsystem extends SubsystemBase {
 
       xSpeedCommanded = m_currentTranslationMag * Math.cos(m_currentTranslationDir);
       ySpeedCommanded = m_currentTranslationMag * Math.sin(m_currentTranslationDir);
-      m_currentRotation = m_rotLimiter.calculate(rot);
+      m_currentRotation = m_rotLimiter.calculate(rotSpeed);
 
     } else {
       xSpeedCommanded = xSpeed;
       ySpeedCommanded = ySpeed;
-      m_currentRotation = rot;
+      m_currentRotation = rotSpeed;
     }
 
     // Convert the commanded speeds into the correct units for the drivetrain
@@ -269,7 +279,7 @@ public class DriveSubsystem extends SubsystemBase {
     double ySpeedDelivered = ySpeedCommanded * DriveConstants.kMaxSpeedMetersPerSecond;
 
     double rotDelivered = m_currentRotation * DriveConstants.kMaxAngularSpeed;
-    if (rateLimit)
+    if (rateLimitForManual)
       rotDelivered = m_currentRotation * DriveConstants.kMaxRateLimitedAngularSpeed; // can be lower, for manual driving
 
     var swerveModuleStates = DriveConstants.kDriveKinematics.toSwerveModuleStates(

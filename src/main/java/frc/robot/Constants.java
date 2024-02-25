@@ -155,8 +155,7 @@ public final class Constants {
      */
     public static final int kDriverControllerPort = 0;
     public static final int kManipulatorController = 1; // second joystick for the manipulator control
-
-    public static final double kDriveDeadband = 0.05;
+    public static final double kDriveDeadband = 0.03; // plus minus 3% from zero does not count
   }
 
   public static final class AutoConstants {
