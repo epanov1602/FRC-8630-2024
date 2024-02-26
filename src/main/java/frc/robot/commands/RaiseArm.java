@@ -32,25 +32,27 @@ public class RaiseArm extends Command {
   // Called when the command is initially scheduled.
   @Override
   public void initialize() {
-    // TODO: write me, students
+    m_arm.setAngleGoal(m_targetAngle);
   }
 
   // Called every time the scheduler runs while the command is scheduled.
   @Override
   public void execute() {
-    // TODO: write me, students
+    // nothing to do, the arm is working to get to the angle
   }
 
   // Called once the command ends or is interrupted.
   @Override
   public void end(boolean interrupted) {
-    // TODO: write me, students
   }
 
   // Returns true when the command should end.
   @Override
   public boolean isFinished() {
-    // TODO: write me, students
-    return true;
+    double distanceToTarget = Math.abs(m_arm.getAngle() - m_targetAngle);
+    if (distanceToTarget < kAngleTolerance)
+      return true;
+    else
+      return false;
   }
 }

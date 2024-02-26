@@ -47,14 +47,6 @@ public class Intake extends SubsystemBase {
   }
 
   /**
-   * Disable limit switch and feed note to shooter.
-   */
-  public void feedToShooter(){
-    m_forwardLimit.enableLimitSwitch(false);
-    setSpeed(0.5);
-  }
-
-  /**
    * Enable the limit switch and turn on motor forward
    */
   public void intakeNote(){

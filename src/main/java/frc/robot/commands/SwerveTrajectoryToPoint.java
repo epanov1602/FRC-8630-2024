@@ -4,6 +4,7 @@
 
 package frc.robot.commands;
 
+import java.io.Console;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,6 +17,7 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.trajectory.Trajectory;
 import edu.wpi.first.math.trajectory.TrajectoryConfig;
 import edu.wpi.first.math.trajectory.TrajectoryGenerator;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
@@ -36,6 +38,23 @@ public class SwerveTrajectoryToPoint extends Command {
     m_drivetrain = drivetrain;
     m_waypoints = waypoints;
     m_targetPose = targetPose;
+    addRequirements(drivetrain);
+  }
+
+  public SwerveTrajectoryToPoint(DriveSubsystem drivetrain, List<Translation2d> waypoints, Rotation2d targetHeading) {
+    // last waypoint will become our target, it targetHeading is given instead of targetPose
+    Translation2d lastWaypoint = waypoints.get(waypoints.size() - 1);
+  
+    ArrayList<Translation2d> allWaypointsExceptLast = new ArrayList<Translation2d>();
+    for (Translation2d waypoint : waypoints) {
+      if (waypoint != lastWaypoint)
+        allWaypointsExceptLast.add(waypoint);
+    }
+
+    m_waypoints = allWaypointsExceptLast;
+    m_targetPose = new Pose2d(lastWaypoint, targetHeading);
+
+    m_drivetrain = drivetrain;
     addRequirements(drivetrain);
   }
 

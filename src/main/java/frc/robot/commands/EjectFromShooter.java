@@ -4,30 +4,36 @@
 
 package frc.robot.commands;
 
-import edu.wpi.first.wpilibj.AddressableLED;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
+import frc.robot.Constants;
 import frc.robot.subsystems.Intake;
+import frc.robot.subsystems.SmartMotionArm;
 import frc.robot.subsystems.SmartMotionShooter;
 
-public class EjectNote extends Command {
-  private final Intake m_intake; // TODO: later replace with Manipulator, which would contain an intake
-  private final double m_speed;
+public class EjectFromShooter extends Command {
+  private final SmartMotionShooter m_shooter;
+  private final SmartMotionArm m_arm;
+  private final Intake m_intake;
+  private double m_startTime = 0; 
 
-  private double m_startTime = 0;
-
-  /** Creates a new DiscardNote. */
-  public EjectNote(Intake intake, double speed) {
+  /** Creates a new EjectFromShooter. */
+  public EjectFromShooter(SmartMotionShooter shooter, Intake intake, SmartMotionArm arm) {
+    m_shooter = shooter;
     m_intake = intake;
-    m_speed = speed;
+    m_arm = arm;
     addRequirements(intake);
+    addRequirements(shooter);
+    addRequirements(arm);
   }
 
   // Called when the command is initially scheduled.
   @Override
   public void initialize() {
-    m_intake.ejectNote(m_speed);
     m_startTime = Timer.getFPGATimestamp();
+    m_arm.setAngleGoal(135); // highest angle to reach
+    m_intake.feedNoteToShooter();
+    m_shooter.setVelocityGoal(Constants.ShooterConstants.initialMaxRPM); // highest RPM
   }
 
   // Called every time the scheduler runs while the command is scheduled.
@@ -37,16 +43,12 @@ public class EjectNote extends Command {
   // Called once the command ends or is interrupted.
   @Override
   public void end(boolean interrupted) {
-    m_intake.stop();
+    m_shooter.Stop();
   }
 
   // Returns true when the command should end.
   @Override
   public boolean isFinished() {
-    if (Timer.getFPGATimestamp() < m_startTime + 1.0)
-      return false; // have been running for less than one second, the note might not be fully out yet
-    if (m_intake.isNoteInside())
-      return false; // looks like the note is still inside
-    return true; // otherwise we are done
+    return Timer.getFPGATimestamp() > m_startTime + 1.0; // give it one second to run
   }
 }

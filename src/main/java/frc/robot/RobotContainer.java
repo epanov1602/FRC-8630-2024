@@ -15,7 +15,7 @@ import edu.wpi.first.math.trajectory.TrajectoryConfig;
 import edu.wpi.first.math.trajectory.TrajectoryGenerator;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.XboxController.Button;
-
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.Constants.AutoConstants;
 import frc.robot.Constants.CameraConstants;
 import frc.robot.Constants.DriveConstants;
@@ -24,13 +24,16 @@ import frc.robot.Constants.OIConstants;
 import frc.robot.Constants.OdometryConstants;
 import frc.robot.commands.AimToDirection;
 import frc.robot.commands.DropArmForPickup;
+import frc.robot.commands.EjectFromShooter;
 import frc.robot.commands.FollowVisualTarget;
 import frc.robot.commands.SwerveToPoint;
 import frc.robot.commands.SwerveTrajectoryToPoint;
 import frc.robot.commands.SwitchVisualTarget;
 import frc.robot.commands.GoToPoint;
 import frc.robot.commands.MockPickupCommand;
+import frc.robot.commands.RaiseArm;
 import frc.robot.commands.ResetOdometry;
+import frc.robot.commands.Shoot;
 import frc.robot.subsystems.DriveSubsystem;
 import frc.robot.subsystems.LimelightCamera;
 import frc.robot.subsystems.SmartMotionArm;
@@ -41,6 +44,7 @@ import frc.robot.subsystems.Intake;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
+import edu.wpi.first.wpilibj2.command.ParallelCommandGroup;
 import edu.wpi.first.wpilibj2.command.ParallelRaceGroup;
 
 import edu.wpi.first.wpilibj2.command.RunCommand;
@@ -66,7 +70,7 @@ public class RobotContainer {
   private Intake m_intake = new Intake(); // TODO: once arm and shooter are integrated, maybe make a composite manipulator subsystem out of them?
 
   // all teleop controllers
-  private CommandXboxController m_driverController = new CommandXboxController(OIConstants.kDriverControllerPort);
+  private CommandXboxController m_driverJoystick = new CommandXboxController(OIConstants.kDriverControllerPort);
   //private CommandXboxController m_manipulatorController = new CommandXboxController(OIConstants.kManipulatorController);
 
   /**
@@ -81,40 +85,103 @@ public class RobotContainer {
       m_drivetrain.setDefaultCommand(new RunCommand(this::copterJoystickDrive, m_drivetrain));
     else
       m_drivetrain.setDefaultCommand(new RunCommand(this::tankJoystickDrive, m_drivetrain));
+
+    // the default command for the aiming camera is to change the LEDs depending on whether the gamepiece is inside of intake or not
+    // (default command only runs if no other command needs to run)
+    /*
+    m_aimingCamera.setDefaultCommand(m_aimingCamera.run(() -> {
+      if (m_intake.isNoteInside())
+         m_aimingCamera.setLightOn();
+      else
+         m_aimingCamera.setLightOff();
+    }));
+    */
   }
 
   private void tankJoystickDrive() {
     // tank layoyt: left stick for movement, right stick for rotation
     m_drivetrain.drive(
-        -MathUtil.applyDeadband(m_driverController.getLeftY(), OIConstants.kDriveDeadband),
-        -MathUtil.applyDeadband(m_driverController.getLeftX(), OIConstants.kDriveDeadband),
-        -MathUtil.applyDeadband(m_driverController.getRightX(), OIConstants.kDriveDeadband),
+        -MathUtil.applyDeadband(m_driverJoystick.getLeftY(), OIConstants.kDriveDeadband),
+        -MathUtil.applyDeadband(m_driverJoystick.getLeftX(), OIConstants.kDriveDeadband),
+        -MathUtil.applyDeadband(m_driverJoystick.getRightX(), OIConstants.kDriveDeadband),
         Constants.DriveConstants.kFieldRelative,
         true);
+
+    // cameras should be in driver camera mode, if operator is active on sticks
+    if (operatorUsingSticks()) {
+      m_pickupCamera.setDriverCameraMode();
+      m_aimingCamera.setDriverCameraMode();
+    }
   }
 
   private void copterJoystickDrive() {
     // if the left stick is down, wiggle drive
-    if (m_driverController.getLeftY() > 0.3) {
-      m_drivetrain.wiggleDrive(m_driverController.getRightY(), 0.2, 0.5); // 0.2 rotation speed, 0.5 seconds per wiggle
+    if (m_driverJoystick.getLeftY() > 0.3) {
+      m_drivetrain.wiggleDrive(m_driverJoystick.getRightY(), 0.2, 0.5); // 0.2 rotation speed, 0.5 seconds per wiggle
       return;
     }
 
     // if keeping high pressure on the throttle stick, not field-relative anymore (for manual aiming)
     double slowDownFactor = 1.0;
     boolean fieldRelative = Constants.DriveConstants.kFieldRelative;
-    if (m_driverController.getLeftY() < -0.3) {
+    if (m_driverJoystick.getLeftY() < -0.3) {
       fieldRelative = false;
       slowDownFactor = 0.3;
     }
 
     // copter layoyt otherwise: right stick for movement, left stick for rotation
     m_drivetrain.drive(
-        -MathUtil.applyDeadband(m_driverController.getRightY() * slowDownFactor, OIConstants.kDriveDeadband),
-        -MathUtil.applyDeadband(m_driverController.getRightX() * slowDownFactor, OIConstants.kDriveDeadband),
-        -MathUtil.applyDeadband(m_driverController.getLeftX() * slowDownFactor, OIConstants.kDriveDeadband),
+        -MathUtil.applyDeadband(m_driverJoystick.getRightY() * slowDownFactor, OIConstants.kDriveDeadband),
+        -MathUtil.applyDeadband(m_driverJoystick.getRightX() * slowDownFactor, OIConstants.kDriveDeadband),
+        -MathUtil.applyDeadband(m_driverJoystick.getLeftX() * slowDownFactor, OIConstants.kDriveDeadband),
         fieldRelative,
         true);
+
+    // cameras should be in driver camera mode, if operator is active on sticks
+    if (operatorUsingSticks()) {
+      m_pickupCamera.setDriverCameraMode();
+      m_aimingCamera.setDriverCameraMode();
+    }
+  }
+
+
+  private FollowVisualTarget makeApproachNoteCommand() {
+    double approachSpeed = 1.0;
+    boolean doneIfNoMoreMovesToMake = true;
+    double stopIfTargetLowerThanDegrees = -9.5;
+    double seekSpeed = 0.1; // seek right and left if not looking
+    var whenToStop = new FollowVisualTarget.WhenToFinish(stopIfTargetLowerThanDegrees, 0, 0, doneIfNoMoreMovesToMake);
+    return new FollowVisualTarget(m_drivetrain, m_pickupCamera, CameraConstants.kNotePipelineIndex, seekSpeed, approachSpeed, Rotation2d.fromDegrees(0), whenToStop);
+  }
+
+  private Command makeApproachSpeakerCommand() {
+    double approachSpeed = -0.3;
+    boolean doneIfNoMoreMovesToMake = true;
+    double stopIfTargetHigherThanDegrees = 11;
+    double seekSpeed = 0.1; // seek right and left if not looking
+    var whenToStop = new FollowVisualTarget.WhenToFinish(0, stopIfTargetHigherThanDegrees, 0, doneIfNoMoreMovesToMake);
+    return new FollowVisualTarget(m_drivetrain, m_aimingCamera, CameraConstants.kSpeakerPipelineIndex, seekSpeed, approachSpeed, Rotation2d.fromDegrees(0), whenToStop);
+  }
+
+  private Command makeWiggleiggleDriveCommand() {
+    SmartDashboard.setDefaultNumber("wiggleRotSpeed", 0.4);
+    SmartDashboard.setDefaultNumber("wiggleTranSpeed", 0.09);
+    SmartDashboard.setDefaultNumber("wiggleInterval", 0.5);
+    var resetWiggles = m_drivetrain.runOnce(() ->m_drivetrain.resetWiggleDrive());
+    var wiggle = m_drivetrain.run(() -> {
+      double rot = SmartDashboard.getNumber("wiggleRotSpeed", 0.0);
+      double trans = SmartDashboard.getNumber("wiggleTranSpeed", 0.0);
+      double interval = SmartDashboard.getNumber("wiggleInterval", 0.0);
+      m_drivetrain.wiggleDrive(trans, rot, interval);
+    });
+    return resetWiggles.andThen(wiggle);
+  }
+
+  private void configureButtonBindings() {
+    m_driverJoystick.a().whileTrue(makeWiggleiggleDriveCommand());
+    m_driverJoystick.b().whileTrue(makeApproachNoteCommand());
+    m_driverJoystick.x().whileTrue(m_drivetrain.run(m_drivetrain::setX));
+    m_driverJoystick.y().whileTrue(makeApproachSpeakerCommand());
   }
 
   /**
@@ -126,98 +193,166 @@ public class RobotContainer {
    * passing it to a
    * {@link JoystickButton}.
    */
-  private void configureButtonBindings() {
-    m_driverController.povDown().onTrue(new IntakeNote(m_intake, m_arm, m_drivetrain, 10 /* angle after intaking */));
-    m_driverController.povUp().onTrue(m_arm.runOnce(() -> m_arm.setAngleGoal(60)));
-    m_driverController.povLeft().onTrue(new EjectNote(m_intake, 0.5));
+  private void configureButtonBindingsComplete() {
+    // button Y to yank note from the shooter
+    m_driverJoystick.y().onTrue(new EjectFromShooter(m_shooter, m_intake, m_arm)); // new ResetOdometry(m_drivetrain)); /* for the actual game, replace with 
 
-    Command resetOdometry = new ResetOdometry(m_drivetrain);
-    m_driverController.button(Button.kY.value).onTrue(resetOdometry);
+    // button X to lock wheels in "X" position and just shoot
+    m_driverJoystick.x().whileTrue(m_drivetrain.run(m_drivetrain::setX));
+    // make it more complex? wheels in X and shoot at 2000 rpm: new ParallelCommandGroup(m_drivetrain.run(m_drivetrain::setX), new Shoot(m_shooter, m_intake, 2000));
+
+    // POV down: pick up the piece using just arm (but not automatically driving towards it)
+    Command pickUpWithoutDriving = makePickupNoteCommand(false, 30); // raise arm by 30 degrees after pickup
+    m_driverJoystick.povDown().whileTrue(pickUpWithoutDriving);
+
+    // POV left: pick up the piece using arm and drivetrain (automatically driving towards gamepiece)
+    Command pickUpWithDriving = makePickupNoteCommand(true, 30); // raise arm by 30 degrees after pickup
+    m_driverJoystick.povLeft().whileTrue(pickUpWithDriving);
+
+    // POV right: drop the arm tp 15 degrees and eject the note with speed 0.5
+    Command dropArm = new RaiseArm(m_arm, 15);
+    Command eject = new EjectNote(m_intake, 0.5);
+    m_driverJoystick.povRight().whileTrue(new SequentialCommandGroup(dropArm, eject));
+
+    // POV up: raise, aim and shoot at angle 120, rpm 2000 (scoring target is nearby)
+    Command raiseAndShoot = makeAimAndShootCommand(120, CameraConstants.kSpeakerPipelineIndex, 2000);
+    m_driverJoystick.povUp().whileTrue(raiseAndShoot);
   
-    Command goBack = new SwerveToPoint(m_drivetrain, 0, 0, 0, false);
-    m_driverController.button(Button.kB.value).onTrue(goBack.until(this::operatorUsingSticks));
+    // left bumper: go to feeder station and try to pickup a note using vision (human player can throw that note right when robot approaches)
+    Command goToFeeder = new SwerveTrajectoryToPoint(m_drivetrain, FieldMap.kBlueApproachFeederWhileHuggingWall, Rotation2d.fromDegrees(0));
+    Command prepareToLookForNotes = new SwitchVisualTarget(m_pickupCamera, CameraConstants.kNotePipelineIndex);
+    Command pickUpNote = makePickupNoteCommand(true, 30 /* 30 degree arm angle after successful pickup */);
+    Command pickUpNoteFromFeeder = new SequentialCommandGroup(prepareToLookForNotes, goToFeeder, pickUpNote);
+    Command pickUpNoteFromFeederSafely = pickUpNoteFromFeeder.until(this::operatorUsingSticks);
+    m_driverJoystick.leftBumper().whileTrue(pickUpNoteFromFeederSafely);
 
-    Command approachNote = new FollowVisualTarget(
-      m_drivetrain, m_pickupCamera, CameraConstants.kNotePipelineIndex,
-      CameraConstants.kNoteApproachSpeed, CameraConstants.kNoteApproachRotationSpeed, CameraConstants.kPickupCameraImageRotation,
-      new FollowVisualTarget.WhenToFinish(-17, 0, 0, true));
-    m_driverController.button(Button.kB.value).onTrue(approachNote);
+    // right bumper: return to the spearker and score that note
+    Command returnToSpeaker = new SwerveTrajectoryToPoint(m_drivetrain, FieldMap.kBlueRetreatFromCenerlineAlongRightWall, Rotation2d.fromDegrees(-45)); // face -45 degrees at the end, for aiming
+    Command prepareToLookForSpeaker = new SwitchVisualTarget(m_aimingCamera, CameraConstants.kSpeakerPipelineIndex);
+    Command aimAndShoot = makeAimAndShootCommand(110, CameraConstants.kSpeakerPipelineIndex, 2000 /* shoot at 2000 rpm */);
+    Command returnAndScore = new SequentialCommandGroup(prepareToLookForSpeaker, returnToSpeaker, aimAndShoot);
+    Command returnAndScoreSafely = returnAndScore.until(this::operatorUsingSticks);
+    m_driverJoystick.rightBumper().whileTrue(returnAndScoreSafely);
 
-    // a slightly bigger command: return while hugging the left side of the field
-    Command retreatUsingLeftSideOfTheField = getRetreatUsingLeftSideOfTheFieldCommand();
-    m_driverController.button(Button.kLeftBumper.value).onTrue(retreatUsingLeftSideOfTheField);
+    // button B: before opponents do the same, race to the center line and grab one note and waise it all the way up (90 degrees)
+    Command trajectoryToCenterLine = new SwerveTrajectoryToPoint(m_drivetrain, FieldMap.kBlueApproachCenerlineFromRight, Rotation2d.fromDegrees(45));
+    Command goFindOneNote = makeFindAndHaulAwayCommand(10 /* arm angle after pickup */, trajectoryToCenterLine, new RaiseArm(m_arm, 90));
+    m_driverJoystick.b().whileTrue(goFindOneNote);
 
-    // and even bigger: a command run around until gamepiece (note) is acquired on camera, and then approach that note and pick up
-
-    // -- part 0: start detecting gamepiece target (note)
-    Command findAndApproachSafely = getFindAndApproachSafelyCommand();
-    m_driverController.button(Button.kLeftBumper.value).onTrue(findAndApproachSafely);
+    // finally, button A: do what the autonomous mode would do (but interruptable, because only running while pushed)
+    Command copyOfAutonomous = getAutonomousCommand();
+    m_driverJoystick.a().whileTrue(copyOfAutonomous);
   }
 
-  private Command getFindAndApproachSafelyCommand() {
-    var switchToDetectingNote = new SwitchVisualTarget(m_pickupCamera, CameraConstants.kNotePipelineIndex);
 
-    // -- part 1: running around until target detected reliably
-    var runAroundLooking = new SwerveTrajectoryToPoint(
-      m_drivetrain,
-      List.of(
-        new Translation2d(0.0, 1),
-        new Translation2d(0.5, 0),
-        new Translation2d(1.0, 1),
-        new Translation2d(1.5, 0),
-        new Translation2d(2, 1)
-      ),
-      new Pose2d(1, -0.8, Rotation2d.fromDegrees(-170)));
+  private Command makeAimAndShootCommand(double aimArmAngle, int aimVisualTargetIndex, double shootingFlywheelRpm) {
+    // 1. aim while raising the arm
+    // -- aim visually to the AprilTag below target
+    FollowVisualTarget.WhenToFinish finishAimingIfNotMoving = new FollowVisualTarget.WhenToFinish(0, 0, 0, true);
+    Command aim = new FollowVisualTarget(m_drivetrain, m_aimingCamera, aimVisualTargetIndex, 0, aimVisualTargetIndex, CameraConstants.kAimingCameraImageRotation, finishAimingIfNotMoving);
+    // -- raise
+    RaiseArm raiseArm = new RaiseArm(m_arm, aimArmAngle);
 
-    Command runAroundUntilDetected = runAroundLooking.until(
-      () -> m_pickupCamera.getPercentageOfTimeTargetDetected() > 0.5
-    );
+    // in parallel: aim + raise
+    ParallelRaceGroup raiseAndAim = new ParallelRaceGroup(aim, raiseArm); // maybe also start slowly accelerating the shooter in parallel here?
 
-    // -- part 2: approach the target at speed no more than 0.4 of full throttle (or rotate at rate 0.1 while seeking)
-    var approachTarget = new FollowVisualTarget(
-      m_drivetrain, m_pickupCamera, CameraConstants.kNotePipelineIndex, 0.1, 0.4, CameraConstants.kPickupCameraImageRotation,
-      new FollowVisualTarget.WhenToFinish(-14, 0, 0, true));
-    var pickupIfApproached = new MockPickupCommand(m_drivetrain).onlyIf(
-      () -> approachTarget.getFinishedWithTarget() == true
-    );
-    var approachAndPickup = new SequentialCommandGroup(approachTarget, pickupIfApproached);
+    // 2. shoot only if camera has been seeing the target (otherwise this will be a waste)
+    Command shoot = new Shoot(m_shooter, m_intake, shootingFlywheelRpm);
+    Command shootIfAimedSuccessfully = shoot.onlyIf(m_aimingCamera::isTargetRecentlySeen);
 
-    var startApproachAndPickupIfDetected = approachAndPickup.onlyIf(
-      () -> runAroundLooking.getGotToTheEnd() == false /* only approach the target if the runaround above resulted in finding */
-    );
-
-    // -- finally, the whole sequence together
-    var findAndApproachTarget = new SequentialCommandGroup(
-      switchToDetectingNote,
-      runAroundUntilDetected,
-      startApproachAndPickupIfDetected
-    );
-
-    // (but make it interruptible by operator touching sticks to take control)
-    var findAndApproachSafely = findAndApproachTarget.until(this::operatorUsingSticks);
-    return findAndApproachSafely;
+    // connect 1 + 2
+    Command aimAndShoot = new SequentialCommandGroup(raiseAndAim, shootIfAimedSuccessfully);
+    return aimAndShoot;
   }
 
-  private Command getRetreatUsingLeftSideOfTheFieldCommand() {
-    Command retreatUsingLeftSideOfTheField = new SwerveTrajectoryToPoint(
-      m_drivetrain,
-      List.of(
-        new Translation2d(0.25, 0.0),
-        new Translation2d(0.5, 0.0),
-        new Translation2d(0.75, 0.0),
-        new Translation2d(1.0, 0.0),
-        new Translation2d(1.25, 0.0),
-        new Translation2d(1.375, 1.0),
-        new Translation2d(1.5, 1.5),
-        new Translation2d(1.75, 1.5)
-      ),
-      new Pose2d(2, 1.5, Rotation2d.fromDegrees(-90)));
-    return retreatUsingLeftSideOfTheField;
+  private Command makeRetreatAimAndShootCommand(Command retreatTrajectory, double aimArmAngle, int aimVisualTargetIndex, double shootingFlywheelRpm) {
+    // 1. we already have a retreat trajectory
+
+    // 2. make the aim+shoot command
+    Command aimAndShoot = makeAimAndShootCommand(aimArmAngle, aimVisualTargetIndex, shootingFlywheelRpm);
+
+    // connect 1 + 2
+    Command retreatAimAndShoot = new SequentialCommandGroup(retreatTrajectory, aimAndShoot);
+    return retreatAimAndShoot;
   }
+
+  /**
+   * Makes a command to pick up the note
+   */
+  private Command makePickupNoteCommand(boolean driveTowards, double armAngleAfterPickup) {
+    // 1. take the note
+    Command grabNote;
+    if (driveTowards == true)
+      grabNote = new IntakeNote(m_intake, m_arm, m_drivetrain, armAngleAfterPickup);
+    else /* if driveTowards==false, we are not supposed to drive towards the note, so do not let the command use m_drivetrain */
+      grabNote = new IntakeNote(m_intake, m_arm, null, 0);
+
+    // 2. after the note is in, it might be blocking the shooter from spinning: move it back by a few inches
+    Command unblockShooter = new EjectNote(m_intake, 0.3).withTimeout(0.2); // speed=30%, and add timeout=0.2
+
+    // 1 + 2
+    Command result = new SequentialCommandGroup(grabNote, unblockShooter);
+    return result;
+  }
+
+  /**
+   * Makes a command to approach the note using a pickup camera, and then pick it up
+   */
+  private Command makeApproachAndPickupNoteCommand(double armAngleAfterPickup) {
+    // 1. approach using video
+    var approach = makeApproachNoteCommand();
+
+    // 2. pick up
+    Command pickup = makePickupNoteCommand(true, armAngleAfterPickup);
+    // wait! only pick up if the visual approach actually ended with the target (note) in sight
+    Command pickupIfFound = pickup.onlyIf(approach::getEndedWithTarget);
+
+    // 1 + 2
+    Command approachAndPickup = new SequentialCommandGroup(approach, pickupIfFound);
+    return approachAndPickup;
+  }
+
+  /**
+   * Makes a command to approach the note using a pickup camera, and then pick it up, and haul away
+   * @param haulAwayCommand if not null, set it 
+   */
+  private Command makeApproachPickupAndHaulAwayCommand(double armAngleAfterPickup, Command haulAwayCommand) {
+    // 1. approach and pickup
+    Command approachAndPickup = makeApproachAndPickupNoteCommand(armAngleAfterPickup);
+
+    // 2. haul away *if* note was picked up
+    Command haulAwayIfPickedUp = haulAwayCommand.onlyIf(() -> m_intake.isNoteInside());
+
+    // 1 + 2
+    Command pickupAndHaulAway = new SequentialCommandGroup(approachAndPickup, haulAwayIfPickedUp);
+    return pickupAndHaulAway;
+  }
+
+  /**
+   * Makes a command to go looking for a note along approach trajectory command, pick up using camera, and haul away using some haul away command
+   */
+  private Command makeFindAndHaulAwayCommand(double armAngleAfterPickup, Command approachTrajectory, Command haulAwayCommand) {
+    // 0. make camera look for note before starting the trajectory
+    var makeCameraLookForNote = new SwitchVisualTarget(m_pickupCamera, CameraConstants.kNotePipelineIndex);
+
+    // 1. look for note until camera notices it
+    var followTrajectoryUntilNoteFoundOnCamera = approachTrajectory.until(m_pickupCamera::isTargetRecentlySeen);
+
+    // 2. pickup and haul away
+    var pickupAndHaulAway = makeApproachPickupAndHaulAwayCommand(20, haulAwayCommand); // is 20 degrees a good angle for haul away?
+  
+    // but! only pick-up-and-haul-away should only happen if target was visually noticed
+    var pickupAndHaulAwayIfFound  = pickupAndHaulAway.onlyIf(m_pickupCamera::isTargetRecentlySeen);
+
+    // 1 + 2
+    Command goFetch = new SequentialCommandGroup(makeCameraLookForNote, followTrajectoryUntilNoteFoundOnCamera, pickupAndHaulAwayIfFound);
+    return goFetch;
+  }
+
 
   private boolean operatorUsingSticks() {
-    double totalInput = Math.abs(m_driverController.getLeftX()) + Math.abs(m_driverController.getLeftY())
-        + Math.abs(m_driverController.getRightX()) + Math.abs(m_driverController.getRightY());
+    double totalInput = Math.abs(m_driverJoystick.getLeftX()) + Math.abs(m_driverJoystick.getLeftY())
+        + Math.abs(m_driverJoystick.getRightX()) + Math.abs(m_driverJoystick.getRightY());
     return totalInput > 0.1;
   }
 
@@ -227,8 +362,16 @@ public class RobotContainer {
    * @return the command to run in autonomous
    */
   public Command getAutonomousCommand() {
-    var whenToFinishAiming = new FollowVisualTarget.WhenToFinish(-16, 0, 0, false);
-    return new FollowVisualTarget(m_drivetrain, m_pickupCamera, 9, 0.1, 0.1, Rotation2d.fromDegrees(-30), whenToFinishAiming);
+    // how we go there
+    Command trajectoryAlongCenterLine = new SwerveTrajectoryToPoint(m_drivetrain, FieldMap.kBlueApproachCenerlineFromRight, Rotation2d.fromDegrees(45));
+
+    // how we come back
+    Command trajectoryReturnToSpeaker = new SwerveTrajectoryToPoint(m_drivetrain, FieldMap.kBlueRetreatFromCenerlineAlongRightWall, Rotation2d.fromDegrees(-45)); // face -45 degrees at the end, for aiming
+    Command retreatAndShoot = makeRetreatAimAndShootCommand(trajectoryReturnToSpeaker, 10, CameraConstants.kSpeakerPipelineIndex, 2000 /* shoot at 2000 rpm */);
+
+    // connect them
+    Command getOneNoteFromCenterAndScoreIt = makeFindAndHaulAwayCommand(10 /* arm angle after pickup */, trajectoryAlongCenterLine, retreatAndShoot);
+    return getOneNoteFromCenterAndScoreIt;
   }
 
   public static void testInit() {

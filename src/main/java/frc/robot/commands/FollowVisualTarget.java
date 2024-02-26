@@ -5,12 +5,15 @@
 package frc.robot.commands;
 
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.subsystems.LimelightCamera;
 import frc.robot.Constants;
+import frc.robot.Constants.AutoConstants;
 import frc.robot.subsystems.DriveSubsystem;
 
 public class FollowVisualTarget extends Command {
+  public static double kDirectionToleranceDegrees = 2 * AutoConstants.kDirectionToleranceDegrees;
 
   private final DriveSubsystem m_drivetrain;
   private final LimelightCamera m_camera;
@@ -75,6 +78,7 @@ public class FollowVisualTarget extends Command {
     m_lastSeenTargetX = 0;
     m_lastPipelineIndex = m_camera.getPipeline();
     m_camera.setPipeline(m_targetPipelineIndex);
+    m_camera.setComputerVisionMode();
   }
 
   // Called every time the scheduler runs while the command is scheduled.
@@ -84,6 +88,7 @@ public class FollowVisualTarget extends Command {
     if (targetX == 0) {
       // target not found: stop or seek?
       if (m_seekingTurnSpeed == 0 && m_whenToFinish.m_finishIfNotMoving) {
+        System.out.println("stopping because target is not seen anymore");
         m_timeToStop = true;
         return;
       }
@@ -99,28 +104,42 @@ public class FollowVisualTarget extends Command {
 
       // should we be moving towards it?
       double forwardSpeed = m_approachSpeed;
-      if (turningSpeed > Constants.AutoConstants.kMaxTurningSpeed) {
-        turningSpeed = Constants.AutoConstants.kMaxTurningSpeed;
-        forwardSpeed = 0; // we are not aimed too well
-      }
       if (turningSpeed < Constants.AutoConstants.kMinTurningSpeed)
         turningSpeed = Constants.AutoConstants.kMinTurningSpeed;
       if (degreesLeftToTurn < 0)
         turningSpeed = -turningSpeed;
-      if (Math.abs(degreesLeftToTurn) < Constants.AutoConstants.kDirectionToleranceDegrees)
+      if (Math.abs(degreesLeftToTurn) < kDirectionToleranceDegrees)
         turningSpeed = 0;
 
-      // are we finished?
-      if (m_whenToFinish.m_maxTargetSize > 0 && m_camera.getA() > m_whenToFinish.m_maxTargetSize)
-        m_timeToStop = true;
-      if (m_whenToFinish.m_maxTargetY != 0 && m_camera.getY() > m_whenToFinish.m_maxTargetY)
-        m_timeToStop = true;
-      if (m_whenToFinish.m_minTargetY != 0 && m_camera.getY() < m_whenToFinish.m_minTargetY)
-        m_timeToStop = true;
-      if (forwardSpeed == 0 && turningSpeed == 0 && m_whenToFinish.m_finishIfNotMoving)
-        m_timeToStop = true;
+      if (turningSpeed > Constants.AutoConstants.kMaxTurningSpeed) {
+        turningSpeed = Constants.AutoConstants.kMaxTurningSpeed;
+        forwardSpeed = 0; // we are not aimed too well at all, let's just turn without moving foward
+      } else {
+        // reduce forward speed when we need to turn
+        forwardSpeed *= (1 - (Math.abs(turningSpeed) / Constants.AutoConstants.kMaxTurningSpeed));
+      }
 
-      m_drivetrain.drive(forwardSpeed, 0, turningSpeed, false, true);
+      // are we finished?
+      if (m_whenToFinish.m_maxTargetSize > 0 && m_camera.getA() > m_whenToFinish.m_maxTargetSize) {
+        System.out.println("stopping because reached maxTargetSize: " + m_camera.getA());
+        m_timeToStop = true;
+      }
+      if (m_whenToFinish.m_maxTargetY != 0 && m_camera.getY() > m_whenToFinish.m_maxTargetY) {
+        System.out.println("stopping because reached maxTargetY: " + m_camera.getY());
+        m_timeToStop = true;
+      }
+      if (m_whenToFinish.m_minTargetY != 0 && m_camera.getY() < m_whenToFinish.m_minTargetY) {
+        System.out.println("stopping because reached minTargetY: " + m_camera.getY());
+        m_timeToStop = true;
+      }
+      if (forwardSpeed == 0 && turningSpeed == 0 && m_whenToFinish.m_finishIfNotMoving) {
+        System.out.println("stopping because nothing to do");
+        m_timeToStop = true;
+      }
+
+      SmartDashboard.putNumber("rotSpeed", turningSpeed);
+      SmartDashboard.putNumber("fwdSpeed", forwardSpeed);
+      m_drivetrain.drive(forwardSpeed, 0, turningSpeed, false, false);
     }
   }
 
@@ -135,6 +154,8 @@ public class FollowVisualTarget extends Command {
   // Returns true when the command should end.
   @Override
   public boolean isFinished() {
+    if (m_timeToStop)
+      System.out.println("stopping for some reason");
     return m_timeToStop;
   }
 }

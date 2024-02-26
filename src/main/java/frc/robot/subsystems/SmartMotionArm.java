@@ -140,6 +140,7 @@ public class SmartMotionArm extends SubsystemBase {
   public void periodic() {
     SmartDashboard.putNumber("angleSeen", m_encoder.getPosition());
     SmartDashboard.putNumber("angleWanted", getAngleGoal());
+    SmartDashboard.putNumber("angleVeloccity", m_encoder.getVelocity());
   }
 
   public void Stop() {

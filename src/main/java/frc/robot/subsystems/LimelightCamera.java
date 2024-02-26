@@ -15,7 +15,8 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 public class LimelightCamera extends SubsystemBase {
   protected NetworkTable m_table;
-  private NetworkTableEntry m_tx, m_ty, m_ta, m_pipeline, m_ledMode;
+  private NetworkTableEntry m_tx, m_ty, m_ta, m_pipeline, m_ledMode, m_camMode;
+  private boolean m_driverCameraMode = true;
   private double m_exposureWindowSeconds = 0.2;
   private double m_percentageOfTimeSeen = 0;
   private double m_lastTimeLooked = 0;
@@ -35,6 +36,7 @@ public class LimelightCamera extends SubsystemBase {
   }
 
   public double getPercentageOfTimeTargetDetected() { return m_percentageOfTimeSeen; }
+  public boolean isTargetRecentlySeen() { return m_percentageOfTimeSeen > 0.5; }
 
   public int getPipeline() { return (int)m_pipeline.getDouble(-1); }
   public void setPipeline(int pipeline) { m_pipeline.setDouble(pipeline); m_percentageOfTimeSeen = 0; }
@@ -44,12 +46,16 @@ public class LimelightCamera extends SubsystemBase {
   public void setLightOff() { m_ledMode.setNumber(1); }
   public void setLightFlash() { m_ledMode.setNumber(2); }
 
+  public void setComputerVisionMode() { if (m_driverCameraMode) { m_camMode.setNumber(0); m_driverCameraMode = false; } }
+  public void setDriverCameraMode() { if (!m_driverCameraMode) { m_camMode.setNumber(0); m_driverCameraMode = true; } }
+
   public LimelightCamera(String name) {
     super(fixName(name));
     name = fixName(name);
     m_table = NetworkTableInstance.getDefault().getTable(name);
     m_pipeline = m_table.getEntry("pipeline");
     m_ledMode = m_table.getEntry("ledMode");
+    m_camMode = m_table.getEntry("camMode");
     m_tx = m_table.getEntry("tx");
     m_ty = m_table.getEntry("ty");
     m_ta = m_table.getEntry("ta");

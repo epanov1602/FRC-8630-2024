@@ -162,7 +162,7 @@ public final class Constants {
     // simple driving and turning
 
     // turning
-    public static final double kPRotation = 0.06 / DriveConstants.kMaxAngularSpeed; // proportional gain for rotation: if set too high, robot will overshoot
+    public static final double kPRotation = 0.07 / DriveConstants.kMaxAngularSpeed; // proportional gain for rotation: if set too high, robot will overshoot
     public static final double kMaxTurningSpeed = 0.99;
     public static final double kMinTurningSpeed = 0.03; // any value lower than this causes motors to not spin at all
     public static final double kDirectionToleranceDegrees = 3; // plus minus 3 degrees of direction tolerance is ok
@@ -189,11 +189,15 @@ public final class Constants {
   public static final class CameraConstants {
     public static final Rotation2d kPickupCameraImageRotation = Rotation2d.fromDegrees(0); // should be -30 for camera mounted above the left swerve module 
     public static final String kPickupCameraName = "limelight-pickup";
+
+    public static final Rotation2d kAimingCameraImageRotation = Rotation2d.fromDegrees(0); // should be -30 for camera mounted above the left swerve module 
     public static final String kAimingCameraName = "limelight-aiming";
 
     public static final int kNotePipelineIndex = 9;
     public static final double kNoteApproachSpeed = 0.6;
     public static final double kNoteApproachRotationSpeed = 0.1;
+
+    public static final int kSpeakerPipelineIndex = 4;
   }
 
   public static final class NeoMotorConstants {
