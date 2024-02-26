@@ -46,8 +46,7 @@ public class SmartMotionArm extends SubsystemBase {
   public double kP, kI, kD, kIz, kFF, maxOutput, minOutput, maxRPM, maxVel, minVel, maxAcc, allowedErr, maxAngle,
       minAngle;
   private double angleGoal;
-  private double startingAngle = 0; // straight up
-  private boolean kEncoderInverted = false;
+  private final boolean kEncoderInverted = false;
 
   //use degrees for position
   private static final double kEncoderPositionFactor = 360; // degrees
@@ -69,24 +68,16 @@ public class SmartMotionArm extends SubsystemBase {
    * Set the position goal in angle, >= 0
    */
   public void setAngleGoal(double angle) {
-    System.out.println("setAngleGoal:" + angle);
-    if (!IsAngleGoalValid(angle))
-      return;
     angleGoal = angle;
+    if (angleGoal < minAngle)
+      angleGoal = minAngle;
+    if (angleGoal > maxAngle)
+      angleGoal = maxAngle;
+    System.out.println("setAngleGoal: angle=" + angle + ", angleGoal=" + angleGoal);
     pidController.setReference(angle, CANSparkMax.ControlType.kSmartMotion);
   }
 
-  public boolean IsAngleGoalValid(double angle) {
-    if (angle < minAngle || angle > maxAngle) {
-      System.out.println("Illegal Arm Angle Goal: " + angle);
-      return false;
-    }
-    return true;
-  }
-
   public SmartMotionArm() {
-    angleGoal = startingAngle;
-    
     leadMotor = new CANSparkMax(Constants.CANIDs.kArmMotorRight, MotorType.kBrushless);
     leadMotor.restoreFactoryDefaults();
     leadMotor.setInverted(true);
@@ -140,6 +131,9 @@ public class SmartMotionArm extends SubsystemBase {
     pidController.setSmartMotionMinOutputVelocity(minVel, smartMotionSlot);
     pidController.setSmartMotionMaxAccel(maxAcc, smartMotionSlot);
     pidController.setSmartMotionAllowedClosedLoopError(allowedErr, smartMotionSlot);
+
+    // and our first angle goal
+    setAngleGoal(minAngle);
   }
 
   @Override

@@ -58,7 +58,7 @@ import java.util.List;
  */
 public class RobotContainer {
   // all robot's subsystems
-  private static DriveSubsystem m_robotDrive = new DriveSubsystem();
+  private static DriveSubsystem m_drivetrain = new DriveSubsystem();
   private static LimelightCamera m_pickupCamera = new LimelightCamera(CameraConstants.kPickupCameraName);
   private static LimelightCamera m_aimingCamera = new LimelightCamera(CameraConstants.kAimingCameraName);
   private SmartMotionArm m_arm = new SmartMotionArm();
@@ -78,14 +78,14 @@ public class RobotContainer {
 
     // Configure default teleop commands
     if (Constants.DriveConstants.kCopterJoystickLayout)
-      m_robotDrive.setDefaultCommand(new RunCommand(this::copterJoystickDrive, m_robotDrive));
+      m_drivetrain.setDefaultCommand(new RunCommand(this::copterJoystickDrive, m_drivetrain));
     else
-      m_robotDrive.setDefaultCommand(new RunCommand(this::tankJoystickDrive, m_robotDrive));
+      m_drivetrain.setDefaultCommand(new RunCommand(this::tankJoystickDrive, m_drivetrain));
   }
 
   private void tankJoystickDrive() {
     // tank layoyt: left stick for movement, right stick for rotation
-    m_robotDrive.drive(
+    m_drivetrain.drive(
         -MathUtil.applyDeadband(m_driverController.getLeftY(), OIConstants.kDriveDeadband),
         -MathUtil.applyDeadband(m_driverController.getLeftX(), OIConstants.kDriveDeadband),
         -MathUtil.applyDeadband(m_driverController.getRightX(), OIConstants.kDriveDeadband),
@@ -96,7 +96,7 @@ public class RobotContainer {
   private void copterJoystickDrive() {
     // if the left stick is down, wiggle drive
     if (m_driverController.getLeftY() > 0.3) {
-      m_robotDrive.wiggleDrive(m_driverController.getRightY(), 0.2, 0.5); // 0.2 rotation speed, 0.5 seconds per wiggle
+      m_drivetrain.wiggleDrive(m_driverController.getRightY(), 0.2, 0.5); // 0.2 rotation speed, 0.5 seconds per wiggle
       return;
     }
 
@@ -109,7 +109,7 @@ public class RobotContainer {
     }
 
     // copter layoyt otherwise: right stick for movement, left stick for rotation
-    m_robotDrive.drive(
+    m_drivetrain.drive(
         -MathUtil.applyDeadband(m_driverController.getRightY() * slowDownFactor, OIConstants.kDriveDeadband),
         -MathUtil.applyDeadband(m_driverController.getRightX() * slowDownFactor, OIConstants.kDriveDeadband),
         -MathUtil.applyDeadband(m_driverController.getLeftX() * slowDownFactor, OIConstants.kDriveDeadband),
@@ -127,18 +127,18 @@ public class RobotContainer {
    * {@link JoystickButton}.
    */
   private void configureButtonBindings() {
-    m_driverController.povDown().onTrue(new IntakeNote(m_intake, m_arm, m_robotDrive));
+    m_driverController.povDown().onTrue(new IntakeNote(m_intake, m_arm, m_drivetrain, 10 /* angle after intaking */));
     m_driverController.povUp().onTrue(m_arm.runOnce(() -> m_arm.setAngleGoal(60)));
     m_driverController.povLeft().onTrue(new EjectNote(m_intake, 0.5));
 
-    Command resetOdometry = new ResetOdometry(m_robotDrive);
+    Command resetOdometry = new ResetOdometry(m_drivetrain);
     m_driverController.button(Button.kY.value).onTrue(resetOdometry);
   
-    Command goBack = new SwerveToPoint(m_robotDrive, 0, 0, 0, false);
+    Command goBack = new SwerveToPoint(m_drivetrain, 0, 0, 0, false);
     m_driverController.button(Button.kB.value).onTrue(goBack.until(this::operatorUsingSticks));
 
     Command approachNote = new FollowVisualTarget(
-      m_robotDrive, m_pickupCamera, CameraConstants.kNotePipelineIndex,
+      m_drivetrain, m_pickupCamera, CameraConstants.kNotePipelineIndex,
       CameraConstants.kNoteApproachSpeed, CameraConstants.kNoteApproachRotationSpeed, CameraConstants.kPickupCameraImageRotation,
       new FollowVisualTarget.WhenToFinish(-17, 0, 0, true));
     m_driverController.button(Button.kB.value).onTrue(approachNote);
@@ -159,7 +159,7 @@ public class RobotContainer {
 
     // -- part 1: running around until target detected reliably
     var runAroundLooking = new SwerveTrajectoryToPoint(
-      m_robotDrive,
+      m_drivetrain,
       List.of(
         new Translation2d(0.0, 1),
         new Translation2d(0.5, 0),
@@ -175,9 +175,9 @@ public class RobotContainer {
 
     // -- part 2: approach the target at speed no more than 0.4 of full throttle (or rotate at rate 0.1 while seeking)
     var approachTarget = new FollowVisualTarget(
-      m_robotDrive, m_pickupCamera, CameraConstants.kNotePipelineIndex, 0.1, 0.4, CameraConstants.kPickupCameraImageRotation,
+      m_drivetrain, m_pickupCamera, CameraConstants.kNotePipelineIndex, 0.1, 0.4, CameraConstants.kPickupCameraImageRotation,
       new FollowVisualTarget.WhenToFinish(-14, 0, 0, true));
-    var pickupIfApproached = new MockPickupCommand(m_robotDrive).onlyIf(
+    var pickupIfApproached = new MockPickupCommand(m_drivetrain).onlyIf(
       () -> approachTarget.getFinishedWithTarget() == true
     );
     var approachAndPickup = new SequentialCommandGroup(approachTarget, pickupIfApproached);
@@ -200,7 +200,7 @@ public class RobotContainer {
 
   private Command getRetreatUsingLeftSideOfTheFieldCommand() {
     Command retreatUsingLeftSideOfTheField = new SwerveTrajectoryToPoint(
-      m_robotDrive,
+      m_drivetrain,
       List.of(
         new Translation2d(0.25, 0.0),
         new Translation2d(0.5, 0.0),
@@ -228,16 +228,16 @@ public class RobotContainer {
    */
   public Command getAutonomousCommand() {
     var whenToFinishAiming = new FollowVisualTarget.WhenToFinish(-16, 0, 0, false);
-    return new FollowVisualTarget(m_robotDrive, m_pickupCamera, 9, 0.1, 0.1, Rotation2d.fromDegrees(-30), whenToFinishAiming);
+    return new FollowVisualTarget(m_drivetrain, m_pickupCamera, 9, 0.1, 0.1, Rotation2d.fromDegrees(-30), whenToFinishAiming);
   }
 
   public static void testInit() {
     // run testInit() on each subsystem.
-    m_robotDrive.testInit();
+    m_drivetrain.testInit();
   }
 
   public static void testPeriodic() {
     // run testPeriodic() on each subsystem
-    m_robotDrive.testPeriodic();
+    m_drivetrain.testPeriodic();
   }
 }

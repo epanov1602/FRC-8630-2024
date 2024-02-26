@@ -14,23 +14,32 @@ public class IntakeNote extends Command {
   private final Intake m_intake; // TODO: later replace with Manipulator, which would contain an intake
   private final SmartMotionArm m_arm;
   private final DriveSubsystem m_drivetrain;
+  private final double m_armAngleAfterIntaking;
 
-  /** Creates a new IntakeNote. */
-  public IntakeNote(Intake intake, SmartMotionArm arm, DriveSubsystem drivetrain) {
+  /** Creates a new IntakeNote
+   * @param armAngleAfterIntaking if nonzero, to which angle to raise the arm after intaking
+   * @param drivertrain if not null, which drivetrain to use to approach the gamepiece
+   */
+  public IntakeNote(Intake intake, SmartMotionArm arm, DriveSubsystem drivetrain, double armAngleAfterIntaking) {
     m_intake = intake;
     m_arm = arm;
     m_drivetrain = drivetrain;
+    m_armAngleAfterIntaking = armAngleAfterIntaking;
     addRequirements(intake);
-    addRequirements(arm);
-    addRequirements(drivetrain);
+    if (arm != null)
+      addRequirements(arm);
+    if (drivetrain != null)
+      addRequirements(drivetrain);
   }
 
   // Called when the command is initially scheduled.
   @Override
   public void initialize() {
     m_intake.intakeNote(); // start the intake motor
-    m_arm.setAngleGoal(ArmConstants.initialMinAngle); // lower the arm to grab the note
-    m_drivetrain.resetWiggleDrive(); // prepare to move forward and wiggle to try our best to pick up the note
+    if (m_drivetrain != null)
+      m_drivetrain.resetWiggleDrive(); // prepare to move forward and wiggle to try our best to pick up the note
+    if (m_arm != null && m_armAngleAfterIntaking != 0)
+      m_arm.setAngleGoal(m_armAngleAfterIntaking); // lower the arm to grab the note
   }
 
   // Called every time the scheduler runs while the command is scheduled.
@@ -43,15 +52,20 @@ public class IntakeNote extends Command {
     final double kPickupWiggleRotationSpeed = 0.1;
     final double kPickupWiggleIntervalSeconds = 0.5;
 
-    if (m_arm.getAngle() <= ArmConstants.initialMinAngle + kArmAngleToleranceToPickUp)
-      m_drivetrain.wiggleDrive(kPickupForwardDriveSpeed, kPickupWiggleRotationSpeed, kPickupWiggleIntervalSeconds);
+    if (m_drivetrain != null) {
+      if (m_arm == null || m_arm.getAngle() <= ArmConstants.initialMinAngle + kArmAngleToleranceToPickUp)
+        m_drivetrain.wiggleDrive(kPickupForwardDriveSpeed, kPickupWiggleRotationSpeed, kPickupWiggleIntervalSeconds);
+    }
   }
 
   // Called once the command ends or is interrupted.
   @Override
   public void end(boolean interrupted) {
     m_intake.stop(); // if the command was interrupted, that motor might still be working and we need to stop it
-    m_drivetrain.resetWiggleDrive();
+    if (m_arm != null && m_armAngleAfterIntaking != 0)
+      m_arm.setAngleGoal(m_armAngleAfterIntaking);
+    if (m_drivetrain != null)
+      m_drivetrain.resetWiggleDrive();
   }
 
   // Returns true when the command should end.
