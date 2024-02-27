@@ -10,7 +10,7 @@ import frc.robot.Constants.ArmConstants;
 import frc.robot.subsystems.SmartMotionArm;
 
 public class RaiseArm extends Command {
-  private static final double kAngleTolerance = 4; // degrees
+  private static final double kAngleTolerance = 8; // degrees
 
   private final SmartMotionArm m_arm;
   private double m_targetAngle;

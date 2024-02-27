@@ -261,11 +261,12 @@ public final class Constants {
    */
   public static final class ArmConstants {
     // PID coefficients
-    public static final double initialP = 10e-5;
-    public static final double initialI = 0; // 1e-6;
-    public static final double initialD = 0;
-    public static final double initialIz = 0;
-    public static final double initialFF = 0; // 0.000156;
+    public static final double initialP = 1.3e-4; // critical gain is 1.8e-4, do not go above that
+    public static final double initialI = 1e-7; // revert it to 0, if you see instability
+    public static final double initialD = 0.5e-4;
+    // 8 * 700 = 2800
+    public static final double initialIz = 1500; // in whichever units it is
+    public static final double initialFF = 0;
     public static final double initialMaxOutput = 1;
     public static final double initialMinOutput = -1;
     public static final double initialMaxRPM = 5700;
@@ -274,9 +275,9 @@ public final class Constants {
     public static final double initialMaxVel = 2000; // rpm
     public static final double initialMinVel = -2000; // rpm
     public static final double initialMaxAcc = 2500;
-    public static final double initialAllowedError = .02;
-    public static final double initialMaxAngle = +110;
-    public static final double initialMinAngle = +5; // good angle for picking up
+    public static final double initialAllowedError = .2; // was 0.02
+    public static final double initialMaxAngle = 80;
+    public static final double initialMinAngle = 15;
 
     //chainPitch = 0.375; // 3/8 inches; #35 chain
     private static final double chainSprocket = 60; // teeth

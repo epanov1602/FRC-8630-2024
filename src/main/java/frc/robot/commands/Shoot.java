@@ -22,6 +22,7 @@ public class Shoot extends Command {
   /** Creates a new Shoot. */
   public Shoot(SmartMotionShooter shooter, Intake intake, double flywheelRpm) {
     m_flywheelRpm = Math.max(flywheelRpm, kMinimumRpm);
+    // TODO: check agains max rpm
     m_intake = intake;
     m_shooter = shooter;
     addRequirements(shooter);
@@ -39,7 +40,7 @@ public class Shoot extends Command {
   @Override
   public void execute() {
     if (m_feedTime == 0 /* if we have not fed anything into flywheel yet */) {
-      if (m_shooter.getVelocity() >= 0.95 * m_flywheelRpm /* and if the needed flywheel velocity is almost reached */) {
+      if (m_shooter.getVelocity() >= 0.85 * m_flywheelRpm /* and if the needed flywheel velocity is almost reached */) {
         m_intake.feedNoteToShooter();
         m_feedTime = Timer.getFPGATimestamp(); /* and note the time when the feeding started */ 
       }
@@ -62,6 +63,7 @@ public class Shoot extends Command {
   public void end(boolean interrupted) {
     // TODO: request intake to stop feeding
     m_shooter.setVelocityGoal(0); /* time to stop the flywheel */
+    m_intake.stop();
   }
 
 }

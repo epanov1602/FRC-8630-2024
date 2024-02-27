@@ -38,8 +38,8 @@ public class IntakeNote extends Command {
     m_intake.intakeNote(); // start the intake motor
     if (m_drivetrain != null)
       m_drivetrain.resetWiggleDrive(); // prepare to move forward and wiggle to try our best to pick up the note
-    if (m_arm != null && m_armAngleAfterIntaking != 0)
-      m_arm.setAngleGoal(m_armAngleAfterIntaking); // lower the arm to grab the note
+    if (m_arm != null)
+      m_arm.setAngleGoal(14); // lower the arm to grab the note
   }
 
   // Called every time the scheduler runs while the command is scheduled.
@@ -53,6 +53,7 @@ public class IntakeNote extends Command {
     final double kPickupWiggleIntervalSeconds = 0.5;
 
     if (m_drivetrain != null) {
+      // wait until the arm is low enough
       if (m_arm == null || m_arm.getAngle() <= ArmConstants.initialMinAngle + kArmAngleToleranceToPickUp)
         m_drivetrain.wiggleDrive(kPickupForwardDriveSpeed, kPickupWiggleRotationSpeed, kPickupWiggleIntervalSeconds);
     }

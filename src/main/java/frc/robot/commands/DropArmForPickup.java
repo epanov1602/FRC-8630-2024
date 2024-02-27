@@ -21,7 +21,7 @@ public class DropArmForPickup extends Command {
   // Called when the command is initially scheduled.
   @Override
   public void initialize() {
-    m_arm.setAngleGoal(0);
+    m_arm.setAngleGoal(15);
   }
 
   // Called every time the scheduler runs while the command is scheduled.

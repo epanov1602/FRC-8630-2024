@@ -31,9 +31,9 @@ public class EjectFromShooter extends Command {
   @Override
   public void initialize() {
     m_startTime = Timer.getFPGATimestamp();
-    m_arm.setAngleGoal(135); // highest angle to reach
+    m_arm.setAngleGoal(80); // highest angle to reach
     m_intake.feedNoteToShooter();
-    m_shooter.setVelocityGoal(Constants.ShooterConstants.initialMaxRPM); // highest RPM
+    m_shooter.setVelocityGoal(2000);
   }
 
   // Called every time the scheduler runs while the command is scheduled.
@@ -44,6 +44,7 @@ public class EjectFromShooter extends Command {
   @Override
   public void end(boolean interrupted) {
     m_shooter.Stop();
+    m_intake.stop();
   }
 
   // Returns true when the command should end.

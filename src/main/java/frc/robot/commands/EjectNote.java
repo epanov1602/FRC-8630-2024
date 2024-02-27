@@ -4,28 +4,34 @@
 
 package frc.robot.commands;
 
-import edu.wpi.first.wpilibj.AddressableLED;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.subsystems.Intake;
-import frc.robot.subsystems.SmartMotionShooter;
+import frc.robot.subsystems.SmartMotionArm;
 
 public class EjectNote extends Command {
-  private final Intake m_intake; // TODO: later replace with Manipulator, which would contain an intake
+  private final Intake m_intake; // TODO: later replace with Manipulator, which would contain an 
+  private final SmartMotionArm m_arm;
   private final double m_speed;
 
   private double m_startTime = 0;
 
   /** Creates a new DiscardNote. */
-  public EjectNote(Intake intake, double speed) {
+  public EjectNote(Intake intake, SmartMotionArm arm, double speed) {
     m_intake = intake;
+    m_arm = arm;
     m_speed = speed;
     addRequirements(intake);
+    if (arm != null)
+      addRequirements(arm);
   }
 
   // Called when the command is initially scheduled.
   @Override
   public void initialize() {
+    // todo: do this at an angle!!!
+    if (m_arm != null)
+      m_arm.setAngleGoal(30);
     m_intake.ejectNote(m_speed);
     m_startTime = Timer.getFPGATimestamp();
   }
