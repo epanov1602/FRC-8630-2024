@@ -89,7 +89,7 @@ Now, try it: robot tries to wiggle right and left in order to pick up the gamepi
 ## 4. POV-up button to raise the arm, and fire the gamepiece
 
 First, go to `RobotContainer.java` and somewhere add a function that creates a raise-arm-and-shoot command
-(note how it has to do two things one after another: raise, and *only* when the angle is good ... then shoot, which is different from what RequestArmAngle does by just requesting an angle but not waiting for it)
+(note how it has to do two things one after another: raise, and *only* when the angle is good ... then shoot, which is different from what `RequestArmAngle` does by just requesting an angle but not waiting for it)
 ```
   private Command makeRaiseAndShootCommand(double aimArmAngle, double shootingFlywheelRpm) {
     Command raiseArm = new RaiseArm(m_arm, aimArmAngle);
@@ -101,9 +101,9 @@ First, go to `RobotContainer.java` and somewhere add a function that creates a r
   }
 ```
 
-, now here is the trick -- to bind this to a button we cannot use `whileTrue()` anymore! (we don't want the process to stop in the middle abd the gamepiece left stuck in the shooter, if the operator releases the button before the shooter is done firing).
+, now here is the trick -- to bind this to a button we cannot use `whileTrue()` anymore! (we don't want the command to stop in the middle and the gamepiece left stuck in the shooter if the operator releases the button before the shooter is fully done firing).
 
-Instead, this command should be bound to a button using `onTrue()` method (this means, the command will start when the button is pushed, but it will only finish when it is done).
+Instead, this command should be bound to a button using `onTrue()` method (this means, the command will start executiom when the button is pushed, but it will only finish when it is done).
 
 So, inside of `configureButtonBindings()` function, please add something like this:
 
