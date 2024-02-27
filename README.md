@@ -84,6 +84,8 @@ All that's left to do is go inside of `configureButtonBindings()` function and b
 
 ```
 
+Now, try it: robot tries to wiggle right and left in order to pick up the gamepiece even if it wasn't perfectly in the center, but the duration and speed of those wiggles is not right. Can you find those things in the code and calibrate them?
+
 ## 4. POV-up button to raise the arm, and fire the gamepiece
 
 First, go to `RobotContainer.java` and somewhere add a function that creates a raise-arm-and-shoot command
@@ -99,13 +101,16 @@ First, go to `RobotContainer.java` and somewhere add a function that creates a r
   }
 ```
 
-, and after this command is written make the up POV button invoke this command:
-go inside of `configureButtonBindings()` function, create a command there and bind it to POV-up button:
+, now here is the trick -- to bind this to a button we cannot use `whileTrue()` anymore! (we don't want the process to stop in the middle abd the gamepiece left stuck in the shooter, if the operator releases the button before the shooter is done firing).
+
+Instead, this command should be bound to a button using `onTrue()` method (this means, the command will start when the button is pushed, but it will only finish when it is done).
+
+So, inside of `configureButtonBindings()` function, please add something like this:
 
 ```
     // POV up: raise, aim and shoot at angle 37,and rpm 2000 (not all the way to 5700, since the target is nearby)
     Command raiseAndShoot = makeAimAndShootCommand(37, 2000);
-    m_driverJoystick.povUp().whileTrue(raiseAndShoot);
+    m_driverJoystick.povUp().onTrue(raiseAndShoot);
 ```
 .
 
