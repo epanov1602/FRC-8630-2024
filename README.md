@@ -69,7 +69,7 @@ go inside of `configureButtonBindings()` function, create a pickup command there
 And the moment the operator stops holding the button, the command is ended.
 
 
-## 2. POV-left button to pick up *with* driving towards the target (this approach can also be used in autonomous)
+## 3. POV-left button to pick up *with* driving towards the target (this approach can also be used in autonomous)
 We already did most of the work above, because the appropriate command is can already be created with
 ```
 makePickupNoteCommand(true, 30)
@@ -84,7 +84,7 @@ All that's left to do is go inside of `configureButtonBindings()` function and b
 
 ```
 
-## 3. POV-up button to raise the arm, and fire the gamepiece
+## 4. POV-up button to raise the arm, and fire the gamepiece
 
 First, go to `RobotContainer.java` and somewhere add a function that creates a raise-arm-and-shoot command
 (note how it has to do two things one after another: raise, and *only* when the angle is good ... then shoot, which is different from what RequestArmAngle does by just requesting an angle but not waiting for it)
@@ -108,3 +108,11 @@ go inside of `configureButtonBindings()` function, create a command there and bi
     m_driverJoystick.povUp().whileTrue(raiseAndShoot);
 ```
 .
+
+## 5. Challenge
+For joystick button "Y" can you write and bind a command that would lift the arm to angle 70 or whatever works best to drop a gamepiece into the amp?
+
+## 6. Another challenge
+For joystick button "X" can you write and bind a command that would eject the gamepiece immediately (no matter at what angle the arm was).
+
+(5+6 is what we need to score gamepieces into the amp, of course)
