@@ -126,6 +126,7 @@ public class RobotContainer {
   }
 
   private void configureButtonBindings() {
+    // let's put all the button bindings here, to keep them in one place
   }
 
   private boolean operatorUsingSticks() {
