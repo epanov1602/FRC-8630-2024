@@ -79,8 +79,8 @@ makePickupNoteCommand(true, 30)
 All that's left to do is go inside of `configureButtonBindings()` function and bind it to a button
 ```
     // POV left: pick up the piece using arm and drivetrain (to automatically wiggle-drive towards it, maximizing the chances of pickup)
-    Command pickUpWithoutDriving = makePickupNoteCommand(true, 30); // raise arm by 30 degrees after pickup
-    m_driverJoystick.povLeft().whileTrue(pickUpWithoutDriving);
+    Command pickUpWithDriving = makePickupNoteCommand(true, 30); // raise arm by 30 degrees after pickup
+    m_driverJoystick.povLeft().whileTrue(pickUpWithDriving);
 
 ```
 
