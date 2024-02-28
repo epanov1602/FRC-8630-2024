@@ -109,7 +109,7 @@ So, inside of `configureButtonBindings()` function, please add something like th
 
 ```
     // POV up: raise, aim and shoot at angle 37,and rpm 2000 (not all the way to 5700, since the target is nearby)
-    Command raiseAndShoot = makeAimAndShootCommand(37, 2000);
+    Command raiseAndShoot = makeRaiseAndShootCommand(37, 2000);
     m_driverJoystick.povUp().onTrue(raiseAndShoot);
 ```
 .
