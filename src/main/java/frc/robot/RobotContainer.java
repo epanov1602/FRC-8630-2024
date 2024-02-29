@@ -126,7 +126,65 @@ public class RobotContainer {
   }
 
   private void configureButtonBindings() {
-    // let's put all the button bindings here, to keep them in one place
+  // let's put all the button bindings here, to keep them in one place
+    // POV up: raise, aim and shoot at angle 37,and rpm 2000 (not all the way to 5700, since the target is nearby)
+    Command raiseAndShoot = makeRaiseAndShootCommand(37, 2000);
+    m_driverJoystick.povUp().onTrue(raiseAndShoot);
+
+    // POV left: pick up the piece using arm and drivetrain (to automatically wiggle-drive towards it, maximizing the chances of pickup)
+    Command pickUpWithDriving = makePickupNoteCommand(true, 30); // raise arm by 30 degrees after pickup
+    m_driverJoystick.povLeft().whileTrue(pickUpWithDriving);
+
+    // POV down: pick up the piece using just arm (but not automatically driving towards it)
+    Command pickUpWithoutDriving = makePickupNoteCommand(false, 30); // raise arm by 30 degrees after pickup
+    m_driverJoystick.povDown().whileTrue(pickUpWithoutDriving);
+
+    // POV right: eject the note reliably
+    Command ejectNote = makeEjectNoteCommand();
+    m_driverJoystick.povRight().whileTrue(ejectNote);
+  }
+
+  private void startTheShooterMotor() {
+    m_shooter.setVelocityGoal(2000);
+  }
+
+  private void stopTheShooterMotor() {
+    m_shooter.stop();
+  }
+
+  private Command makeRaiseAndShootCommand(double aimArmAngle, double shootingFlywheelRpm) {
+    Command raiseArm = new RaiseArm(m_arm, aimArmAngle);
+
+    Command shoot = new Shoot(m_shooter, m_intake, shootingFlywheelRpm);
+
+    Command result = new SequentialCommandGroup(raiseArm, shoot);
+    return result;
+  }
+
+  private Command makeEjectNoteCommand() {
+    Command dropArm = new RaiseArm(m_arm, 30); // is 30 a good angle to eject reliably? 
+    Command eject = new EjectNote(m_intake, m_arm, 0.5); // is 50% a good intake reverse speed for ejecting?
+    Command result = new SequentialCommandGroup(dropArm, eject);
+    return result;
+  }
+
+  private Command makePickupNoteCommand(boolean driveTowards, double armAngleAfterPickup) {
+    // 0. strart dropping to the pickup angle, but do not wait until that completes (just "request" the arm to get to new angle)
+    RequestArmAngle beAtPickupAngle = new RequestArmAngle(m_arm, 15);
+
+    // 1. take the note
+    Command grabNote;
+    if (driveTowards == true)
+      grabNote = new IntakeNote(m_intake, m_arm, m_drivetrain, armAngleAfterPickup);
+    else /* if driveTowards==false, we are not supposed to drive towards the note, so do not let the command use m_drivetrain */
+      grabNote = new IntakeNote(m_intake, m_arm, null, armAngleAfterPickup);
+
+    // 2. after the note is in, it might be blocking the shooter from spinning: move it back by a few inches
+    Command unblockShooter = new EjectNote(m_intake, null, 0.05).withTimeout(0.1); // speed=30%, and add timeout=0.2
+
+    // 0 + 1 + 2
+    Command result = new SequentialCommandGroup(beAtPickupAngle, grabNote, unblockShooter);
+    return result;
   }
 
   private boolean operatorUsingSticks() {

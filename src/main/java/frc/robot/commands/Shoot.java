@@ -34,6 +34,7 @@ public class Shoot extends Command {
   public void initialize() {
     m_feedTime = 0; // make a note that we have not fed anything into the flywheel
     m_shooter.setVelocityGoal(m_flywheelRpm); // and start spinning the flywheel
+    System.out.println("shooter command has set velocity goal " + m_flywheelRpm);
   }
 
   // Called every time the scheduler runs while the command is scheduled.
@@ -41,6 +42,7 @@ public class Shoot extends Command {
   public void execute() {
     if (m_feedTime == 0 /* if we have not fed anything into flywheel yet */) {
       if (m_shooter.getVelocity() >= 0.85 * m_flywheelRpm /* and if the needed flywheel velocity is almost reached */) {
+        System.out.println("shooter command has fed the note " + m_flywheelRpm);
         m_intake.feedNoteToShooter();
         m_feedTime = Timer.getFPGATimestamp(); /* and note the time when the feeding started */ 
       }
@@ -54,14 +56,16 @@ public class Shoot extends Command {
       return false; // we have not even started feeding the gamepiece into the shooter
     else if (Timer.getFPGATimestamp() < m_feedTime + 0.5)
       return false; // we have started the feeding, but it was less than a half second ago
-    else
+    else {
+      System.out.println("shooter command finished");
       return true; // otherwise, the command is done: the feeding was started and it was started more than 0.5 seconds ago
+    }
   }
 
   // Called once the command ends or is interrupted.
   @Override
   public void end(boolean interrupted) {
-    // TODO: request intake to stop feeding
+    System.out.println("shooter command is asked to stop " + (interrupted ? "involuntarily" : "voluntarily"));
     m_shooter.setVelocityGoal(0); /* time to stop the flywheel */
     m_intake.stop();
   }
