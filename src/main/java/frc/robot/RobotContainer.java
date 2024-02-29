@@ -134,16 +134,16 @@ public class RobotContainer {
     m_driverJoystick.povUp().onTrue(raiseAndShoot);
 
     // POV left: pick up the piece using arm and drivetrain (to automatically wiggle-drive towards it, maximizing the chances of pickup)
-    Command pickUpWithDriving = makePickupNoteCommand(true, 30); // raise arm by 30 degrees after pickup
+    Command pickUpWithDriving = makePickupNoteCommand(true, 37); // raise arm to 37 degrees after pickup
     m_driverJoystick.povLeft().whileTrue(pickUpWithDriving);
 
     // POV down: pick up the piece using just arm (but not automatically driving towards it)
-    Command pickUpWithoutDriving = makePickupNoteCommand(false, 30); // raise arm by 30 degrees after pickup
+    Command pickUpWithoutDriving = makePickupNoteCommand(false, 37); // raise arm to 30 degrees after pickup
     m_driverJoystick.povDown().whileTrue(pickUpWithoutDriving);
 
     // POV right: eject the note reliably
     Command ejectNote = makeEjectNoteCommand();
-    m_driverJoystick.povRight().whileTrue(ejectNote);
+    m_driverJoystick.povRight().onTrue(ejectNote);
 
     // raw movements of the manipulator, in order to troubleshoot it
     m_manipulatorJoystick.y().onTrue(m_arm.runOnce(() -> m_arm.setAngleGoal(80)));
@@ -169,10 +169,25 @@ public class RobotContainer {
     return result;
   }
 
-  private Command makePickupNoteCommand(boolean driveTowards, double armAngleAfterPickup) {
-    // 0. strart dropping to the pickup angle, but do not wait until that completes (just "request" the arm to get to new angle)
-    RequestArmAngle beAtPickupAngle = new RequestArmAngle(m_arm, 15);
+  private Command makeConsistentEjectNoteCommand() {
+    double ejectIntakeSpeed = 0.17; // is 0.17 a good speed to eject the note?
+    Command raiseArm = new RaiseArm(m_arm, ArmConstants.kArmAngleToEjectIntoAmp); // is 94 a good angle to eject the note into the amp reliably? 
+    Command ejectAndPush = new EjectNote(m_intake, m_arm, ejectIntakeSpeed, ArmConstants.kArmAngleToPushIntoAmp); // is 80 a good angle for pushing the note in
+    Command raiseEjectAndPush = new SequentialCommandGroup(raiseArm, ejectAndPush);
 
+    // to do it more reliably, ensure that the bumper has fully approached the amp *and* ensure consistent starting angle 
+    Command dropToLowerAngle = new RaiseArm(m_arm, ArmConstants.kArmAngleToPushIntoAmp - 5); // 5 degrees lower
+    Command raiseToPushAngle = new RaiseArm(m_arm, ArmConstants.kArmAngleToPushIntoAmp); // good starting angle
+    Command ejectRoutine = new SequentialCommandGroup(dropToLowerAngle, raiseToPushAngle, raiseEjectAndPush);
+
+    // one way to ensure that bumper is touching the amp wall is to be driving towards amp all this time
+    Command beDriving = m_drivetrain.run(() -> m_drivetrain.arcadeDrive(0.09, 0));
+
+    // the result is "be driving until the eject routine is completed"
+    return ejectRoutine.deadlineWith(beDriving);
+  }
+
+  private Command makePickupNoteCommand(boolean driveTowards, double armAngleAfterPickup) {
     // 1. take the note
     Command grabNote;
     if (driveTowards == true)
@@ -184,7 +199,7 @@ public class RobotContainer {
     Command unblockShooter = new EjectNote(m_intake, null, 0.05, 0).withTimeout(0.1); // speed=5%, and add timeout=0.2
 
     // 0 + 1 + 2
-    Command result = new SequentialCommandGroup(beAtPickupAngle, grabNote, unblockShooter);
+    Command result = new SequentialCommandGroup(grabNote, unblockShooter);
     return result;
   }
 

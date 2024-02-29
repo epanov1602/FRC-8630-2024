@@ -12,11 +12,15 @@ First, go to `RobotContainer.java` and somewhere add a function that creates an 
 
 ```
   private Command makeEjectNoteCommand() {
-    Command dropArm = new RaiseArm(m_arm, 30); // is 30 a good angle to eject reliably? 
-    Command eject = new EjectNote(m_intake, m_arm, 0.5); // is 50% a good intake reverse speed for ejecting?
-    Command result = new SequentialCommandGroup(dropArm, eject);
+    double ejectIntakeSpeed = 0.17; // is 0.17 a good speed to eject the note?
+
+    // if we eject the note into the amp, we need to eject at high angle and then push that note with the arm (at lower angle)
+    Command raiseArm = new RaiseArm(m_arm, ArmConstants.kArmAngleToEjectIntoAmp); 
+    Command ejectAndPush = new EjectNote(m_intake, m_arm, ejectIntakeSpeed, ArmConstants.kArmAngleToPushIntoAmp);
+
+    Command result = new SequentialCommandGroup(raiseArm, ejectAndPush);
     return result;
-  } 
+  }
 ```
 
 , and after this command is written make the down button invoke this command with `driveTowards=false`:
@@ -34,13 +38,10 @@ And the moment the operator stops holding the button, the command is ended.
 ## 2. POV-down button to pick up without driving towards the target (driver is supposed to do it)
 
 First, go to `RobotContainer.java` and somewhere add a function that creates a pick up command
-(note how it has to do three things: bring the arm down, run intake until the note is inside, and then move the note a few inches back to unblock the shooter)
+(note how it has to do two things: run intake until the note is inside, and then move the note a few inches back to unblock the shooter)
 
 ```
-  private Command makePickupNoteCommand(boolean driveTowards, double armAngleAfterPickup) {
-    // 0. strart dropping to the pickup angle, but do not wait until that completes (just "request" the arm to get to new angle)
-    RequestArmAngle beAtPickupAngle = new RequestArmAngle(m_arm, 15);
-
+   private Command makePickupNoteCommand(boolean driveTowards, double armAngleAfterPickup) {
     // 1. take the note
     Command grabNote;
     if (driveTowards == true)
@@ -49,10 +50,10 @@ First, go to `RobotContainer.java` and somewhere add a function that creates a p
       grabNote = new IntakeNote(m_intake, m_arm, null, armAngleAfterPickup);
 
     // 2. after the note is in, it might be blocking the shooter from spinning: move it back by a few inches
-    Command unblockShooter = new EjectNote(m_intake, null, 0.05).withTimeout(0.1); // speed=30%, and add timeout=0.2
+    Command unblockShooter = new EjectNote(m_intake, null, 0.05, 0).withTimeout(0.1); // speed=5%, and add timeout=0.2
 
     // 0 + 1 + 2
-    Command result = new SequentialCommandGroup(beAtPickupAngle, grabNote, unblockShooter);
+    Command result = new SequentialCommandGroup(grabNote, unblockShooter);
     return result;
   }
 ```
@@ -108,16 +109,8 @@ Instead, this command should be bound to a button using `onTrue()` method (this 
 So, inside of `configureButtonBindings()` function, please add something like this:
 
 ```
-    // POV up: raise, aim and shoot at angle 37,and rpm 2000 (not all the way to 5700, since the target is nearby)
-    Command raiseAndShoot = makeRaiseAndShootCommand(37, 2000);
+    // POV up: raise, aim and shoot at angle 37,and rpm 5700 (unnecessary to go that high though, to be improved)
+    Command raiseAndShoot = makeAimAndShootCommand(37, 5700);
     m_driverJoystick.povUp().onTrue(raiseAndShoot);
 ```
 .
-
-## 5. Challenge
-For joystick button "Y" can you write and bind a command that would lift the arm to angle 70 or whatever works best to drop a gamepiece into the amp?
-
-## 6. Another challenge
-For joystick button "X" can you write and bind a command that would eject the gamepiece immediately (no matter at what angle the arm was).
-
-(5+6 is what we need to score gamepieces into the amp, of course)

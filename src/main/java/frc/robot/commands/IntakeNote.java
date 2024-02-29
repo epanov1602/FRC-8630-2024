@@ -39,7 +39,7 @@ public class IntakeNote extends Command {
     if (m_drivetrain != null)
       m_drivetrain.resetWiggleDrive(); // prepare to move forward and wiggle to try our best to pick up the note
     if (m_arm != null)
-      m_arm.setAngleGoal(14); // lower the arm to grab the note
+      m_arm.setAngleGoal(ArmConstants.initialMinAngle); // lower the arm to grab the note
   }
 
   // Called every time the scheduler runs while the command is scheduled.
@@ -50,8 +50,8 @@ public class IntakeNote extends Command {
     final double kArmAngleToleranceToPickUp = 5;
 
     // these three constants were calibrated by Brian, hope they work for everyone
-    final double kPickupForwardDriveSpeed = 0.09;
-    final double kPickupWiggleRotationSpeed = 0.25;
+    final double kPickupForwardDriveSpeed = 0.1;
+    final double kPickupWiggleRotationSpeed = 0.2;
     final double kPickupWiggleIntervalSeconds = 0.5;
 
     if (m_drivetrain != null) {
