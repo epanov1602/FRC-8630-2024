@@ -38,10 +38,6 @@ public class SmartMotionShooter extends SubsystemBase {
    */
   public void setVelocityGoal(double rpm) {
     System.out.println("setVelocityGoal(" + rpm + ")");
-    if (rpm == m_velocityGoal) {
-      System.out.println("Velocity goal is already set to " + rpm);
-      return;
-    }
     if (rpm < initialMinVel || rpm > initialMaxVel) {
       System.out.println("Shooter Illegal Velocity Goal: " + rpm);
       return;

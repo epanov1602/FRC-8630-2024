@@ -13,14 +13,17 @@ public class EjectNote extends Command {
   private final Intake m_intake; // TODO: later replace with Manipulator, which would contain an 
   private final SmartMotionArm m_arm;
   private final double m_speed;
+  private final double m_armAngleAfterEjected;
 
   private double m_startTime = 0;
+  private boolean m_ejected = false;
 
   /** Creates a new DiscardNote. */
-  public EjectNote(Intake intake, SmartMotionArm arm, double speed) {
+  public EjectNote(Intake intake, SmartMotionArm arm, double speed, double armAngleAfterEjected) {
     m_intake = intake;
     m_arm = arm;
     m_speed = speed;
+    m_armAngleAfterEjected = armAngleAfterEjected;
     addRequirements(intake);
     if (arm != null)
       addRequirements(arm);
@@ -30,15 +33,24 @@ public class EjectNote extends Command {
   @Override
   public void initialize() {
     // todo: do this at an angle!!!
-    if (m_arm != null)
-      m_arm.setAngleGoal(30);
     m_intake.ejectNote(m_speed);
     m_startTime = Timer.getFPGATimestamp();
+    m_ejected = false;
   }
 
   // Called every time the scheduler runs while the command is scheduled.
   @Override
-  public void execute() {}
+  public void execute() {
+    if (m_intake.isNoteInside())
+      return; // do not do anything else until ejected
+
+    // if the ejection just happened, move the arm into post-eject angle
+    if (!m_ejected) {
+      m_ejected = true;
+      if (m_arm != null)
+        m_arm.setAngleGoal(m_armAngleAfterEjected);
+    }
+  }
 
   // Called once the command ends or is interrupted.
   @Override

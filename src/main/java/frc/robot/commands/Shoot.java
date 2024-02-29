@@ -41,7 +41,7 @@ public class Shoot extends Command {
   @Override
   public void execute() {
     if (m_feedTime == 0 /* if we have not fed anything into flywheel yet */) {
-      if (m_shooter.getVelocity() >= 0.85 * m_flywheelRpm /* and if the needed flywheel velocity is almost reached */) {
+      if (m_shooter.getVelocity() >= 0.7 * m_flywheelRpm /* and if the needed flywheel velocity is almost reached */) {
         System.out.println("shooter command has fed the note " + m_flywheelRpm);
         m_intake.feedNoteToShooter();
         m_feedTime = Timer.getFPGATimestamp(); /* and note the time when the feeding started */ 
@@ -65,8 +65,7 @@ public class Shoot extends Command {
   // Called once the command ends or is interrupted.
   @Override
   public void end(boolean interrupted) {
-    System.out.println("shooter command is asked to stop " + (interrupted ? "involuntarily" : "voluntarily"));
-    m_shooter.setVelocityGoal(0); /* time to stop the flywheel */
+    m_shooter.stop();
     m_intake.stop();
   }
 

@@ -16,6 +16,7 @@ import edu.wpi.first.math.trajectory.TrajectoryGenerator;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.XboxController.Button;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import frc.robot.Constants.ArmConstants;
 import frc.robot.Constants.AutoConstants;
 import frc.robot.Constants.CameraConstants;
 import frc.robot.Constants.DriveConstants;
@@ -72,7 +73,7 @@ public class RobotContainer {
 
   // all teleop controllers
   private CommandXboxController m_driverJoystick = new CommandXboxController(OIConstants.kDriverControllerPort);
-  //private CommandXboxController m_manipulatorController = new CommandXboxController(OIConstants.kManipulatorController);
+  private CommandXboxController m_manipulatorJoystick = new CommandXboxController(OIConstants.kManipulatorController);
 
   /**
    * The container for the robot. Contains subsystems, OI devices, and commands.
@@ -126,9 +127,10 @@ public class RobotContainer {
   }
 
   private void configureButtonBindings() {
-  // let's put all the button bindings here, to keep them in one place
-    // POV up: raise, aim and shoot at angle 37,and rpm 2000 (not all the way to 5700, since the target is nearby)
-    Command raiseAndShoot = makeRaiseAndShootCommand(37, 2000);
+    // let's put all the button bindings here, to keep them in one place
+
+    // POV up: raise, aim and shoot at angle 37, and rpm 5700 (it does not have to be 5700 since the target is nearby, but this is for later)
+    Command raiseAndShoot = makeRaiseAndShootCommand(37, 5700);
     m_driverJoystick.povUp().onTrue(raiseAndShoot);
 
     // POV left: pick up the piece using arm and drivetrain (to automatically wiggle-drive towards it, maximizing the chances of pickup)
@@ -142,14 +144,12 @@ public class RobotContainer {
     // POV right: eject the note reliably
     Command ejectNote = makeEjectNoteCommand();
     m_driverJoystick.povRight().whileTrue(ejectNote);
-  }
 
-  private void startTheShooterMotor() {
-    m_shooter.setVelocityGoal(2000);
-  }
-
-  private void stopTheShooterMotor() {
-    m_shooter.stop();
+    // raw movements of the manipulator, in order to troubleshoot it
+    m_manipulatorJoystick.y().onTrue(m_arm.runOnce(() -> m_arm.setAngleGoal(80)));
+    m_manipulatorJoystick.a().onTrue(m_arm.runOnce(() -> m_arm.setAngleGoal(ArmConstants.initialMinAngle)));
+    m_manipulatorJoystick.x().onTrue(m_shooter.runOnce(() -> m_shooter.setVelocityGoal(2000)));
+    m_manipulatorJoystick.b().onTrue(m_shooter.runOnce(() -> m_shooter.setVelocityGoal(0)));
   }
 
   private Command makeRaiseAndShootCommand(double aimArmAngle, double shootingFlywheelRpm) {
@@ -162,9 +162,10 @@ public class RobotContainer {
   }
 
   private Command makeEjectNoteCommand() {
-    Command dropArm = new RaiseArm(m_arm, 30); // is 30 a good angle to eject reliably? 
-    Command eject = new EjectNote(m_intake, m_arm, 0.5); // is 50% a good intake reverse speed for ejecting?
-    Command result = new SequentialCommandGroup(dropArm, eject);
+    double ejectIntakeSpeed = 0.17; // is 0.17 a good speed to eject the note?
+    Command raiseArm = new RaiseArm(m_arm, ArmConstants.kArmAngleToEjectIntoAmp); // is 94 a good angle to eject the note into the amp reliably? 
+    Command ejectAndPush = new EjectNote(m_intake, m_arm, ejectIntakeSpeed, ArmConstants.kArmAngleToPushIntoAmp); // is 80 a good angle for pushing the note in
+    Command result = new SequentialCommandGroup(raiseArm, ejectAndPush);
     return result;
   }
 
@@ -180,7 +181,7 @@ public class RobotContainer {
       grabNote = new IntakeNote(m_intake, m_arm, null, armAngleAfterPickup);
 
     // 2. after the note is in, it might be blocking the shooter from spinning: move it back by a few inches
-    Command unblockShooter = new EjectNote(m_intake, null, 0.05).withTimeout(0.1); // speed=30%, and add timeout=0.2
+    Command unblockShooter = new EjectNote(m_intake, null, 0.05, 0).withTimeout(0.1); // speed=5%, and add timeout=0.2
 
     // 0 + 1 + 2
     Command result = new SequentialCommandGroup(beAtPickupAngle, grabNote, unblockShooter);
@@ -199,8 +200,8 @@ public class RobotContainer {
    * @return the command to run in autonomous
    */
   public Command getAutonomousCommand() {
-    // the default auto command is to raise the arm
-    return new RaiseArm(m_arm, 70);
+    // the default auto command is to raise the arm to 80 degree angle
+    return new RaiseArm(m_arm, 80);
   }
 
   public static void testInit() {
