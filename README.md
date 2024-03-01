@@ -28,11 +28,11 @@ go inside of `configureButtonBindings()` function, create a command there and bi
 ```
     // POV right: eject the note reliably
     Command ejectNote = makeEjectNoteCommand();
-    m_driverJoystick.povRight().whileTrue(ejectNote);
+    m_driverJoystick.povRight().onTrue(ejectNote);
 
 ```
-^^ note how we used `whileTrue` method, it means that the command will only be allowed to run while button is pressed.
-And the moment the operator stops holding the button, the command is ended.
+^^ note how we used `onTrue` method, it means that the command will start when button is pushed, but you don't need to hold the button to keep the command running.
+The command will end when it finishes, not when the operator releases the button.
 
 
 ## 2. POV-down button to pick up without driving towards the target (driver is supposed to do it)
