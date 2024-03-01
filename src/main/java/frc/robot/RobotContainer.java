@@ -112,7 +112,7 @@ public class RobotContainer {
     // if keeping high pressure on the throttle stick, not field-relative anymore (for manual aiming)
     double slowDownFactor = 1.0;
     boolean fieldRelative = Constants.DriveConstants.kFieldRelative;
-    if (m_driverJoystick.getLeftY() < -0.5) {
+    if (Math.abs(m_driverJoystick.getLeftY()) > 0.5) {
       fieldRelative = false;
       slowDownFactor = 0.5;
     }
