@@ -4,6 +4,8 @@
 
 package frc.robot.commands;
 
+import org.ejml.dense.block.MatrixOps_DDRB;
+
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -29,13 +31,19 @@ public class FollowVisualTarget extends Command {
     public final double m_maxTargetY;
     public final double m_maxTargetSize;
     public final boolean m_finishIfNotMoving;
+    public final double m_slowdownRadiusPercentage;
 
-    public WhenToFinish(double minTargetY, double maxTargetY, double maxTargetSize, boolean finishIfNotMoving) {
+    public WhenToFinish(double minTargetY, double maxTargetY, double maxTargetSize, boolean finishIfNotMoving, double slowdownRadiusPercentage) {
       m_minTargetY = minTargetY;
       m_maxTargetY = maxTargetY;
       m_maxTargetSize = maxTargetSize;
       m_finishIfNotMoving = finishIfNotMoving;
+      m_slowdownRadiusPercentage = slowdownRadiusPercentage;
     } 
+
+    public WhenToFinish(double minTargetY, double maxTargetY, double maxTargetSize, boolean finishIfNotMoving) {
+      this(minTargetY, maxTargetY, maxTargetSize, finishIfNotMoving, 0.30); // default slowdown radius = 30% of angle
+    }
   }
   private final WhenToFinish m_whenToFinish;
 
@@ -102,40 +110,65 @@ public class FollowVisualTarget extends Command {
       double turningSpeed = Math.abs(degreesLeftToTurn) * Constants.AutoConstants.kPRotation;
       m_lastSeenTargetX = targetX;
 
-      // should we be moving towards it?
-      double forwardSpeed = m_approachSpeed;
+      // should we be turning towards it? or just moving straight?
       if (turningSpeed < Constants.AutoConstants.kMinTurningSpeed)
         turningSpeed = Constants.AutoConstants.kMinTurningSpeed;
-      if (degreesLeftToTurn < 0)
-        turningSpeed = -turningSpeed;
+      if (turningSpeed > Constants.AutoConstants.kMaxTurningSpeed)
+        turningSpeed = Constants.AutoConstants.kMaxTurningSpeed;
       if (Math.abs(degreesLeftToTurn) < kDirectionToleranceDegrees)
         turningSpeed = 0;
+      else if (degreesLeftToTurn < 0)
+        turningSpeed = -turningSpeed;
 
-      if (turningSpeed > Constants.AutoConstants.kMaxTurningSpeed) {
-        turningSpeed = Constants.AutoConstants.kMaxTurningSpeed;
-        forwardSpeed = 0; // we are not aimed too well at all, let's just turn without moving foward
-      } else {
-        // reduce forward speed when we need to turn
-        forwardSpeed *= (1 - (Math.abs(turningSpeed) / Constants.AutoConstants.kMaxTurningSpeed));
+      // should we be moving fast?
+      double forwardSpeed = m_approachSpeed;
+      if (forwardSpeed != 0) {
+        // reduce the forward speed if we also need to turn (otherwise the motor that needs to spin faster might not be able to do it)
+        double reduction = Math.abs(turningSpeed / forwardSpeed);
+        if (reduction > 0.5)
+          reduction = 0.5; // do not make wheels spin the opposite way though
+        forwardSpeed = forwardSpeed * (1 - reduction);
       }
 
       // are we finished?
-      if (m_whenToFinish.m_maxTargetSize > 0 && m_camera.getA() > m_whenToFinish.m_maxTargetSize) {
-        System.out.println("stopping because reached maxTargetSize: " + m_camera.getA());
-        m_timeToStop = true;
+      double percentDistanceToTarget = 1.0;
+      if (m_whenToFinish.m_maxTargetSize > 0) {
+        double size = m_camera.getA();
+        percentDistanceToTarget = Math.abs(size - m_whenToFinish.m_maxTargetSize) / m_whenToFinish.m_maxTargetSize; 
+        if (size > m_whenToFinish.m_maxTargetSize) {
+          System.out.println("stopping because reached maxTargetSize: " + m_camera.getA());
+          m_timeToStop = true;
+        }
       }
-      if (m_whenToFinish.m_maxTargetY != 0 && m_camera.getY() > m_whenToFinish.m_maxTargetY) {
-        System.out.println("stopping because reached maxTargetY: " + m_camera.getY());
-        m_timeToStop = true;
+      if (m_whenToFinish.m_maxTargetY != 0) {
+        double targetY = m_camera.getY();
+        percentDistanceToTarget = Math.abs((targetY - m_whenToFinish.m_maxTargetY) / m_whenToFinish.m_maxTargetY);
+        if (targetY > m_whenToFinish.m_maxTargetY) {
+          System.out.println("stopping because reached maxTargetY: " + m_camera.getY());
+          m_timeToStop = true;
+        }
       }
-      if (m_whenToFinish.m_minTargetY != 0 && m_camera.getY() < m_whenToFinish.m_minTargetY) {
-        System.out.println("stopping because reached minTargetY: " + m_camera.getY());
-        m_timeToStop = true;
+      if (m_whenToFinish.m_minTargetY != 0) {
+        double targetY = m_camera.getY();
+        percentDistanceToTarget = Math.abs((targetY - m_whenToFinish.m_minTargetY) / m_whenToFinish.m_minTargetY);
+        if (targetY < m_whenToFinish.m_minTargetY) {
+          System.out.println("stopping because reached minTargetY: " + m_camera.getY());
+          m_timeToStop = true;
+        }
       }
       if (forwardSpeed == 0 && turningSpeed == 0 && m_whenToFinish.m_finishIfNotMoving) {
         System.out.println("stopping because nothing to do");
         m_timeToStop = true;
       }
+
+      // restrictions on forward speed
+      double noOvershootSpeed = Math.sqrt(percentDistanceToTarget);
+      if (Math.abs(forwardSpeed) > noOvershootSpeed)
+        forwardSpeed = noOvershootSpeed * Math.signum(m_approachSpeed);
+      if (Math.abs(forwardSpeed) < AutoConstants.kMinTurningSpeed)
+        forwardSpeed = AutoConstants.kMinForwardSpeed * Math.signum(m_approachSpeed);
+      if (Math.abs(degreesLeftToTurn) > 60)
+        forwardSpeed = 0;
 
       SmartDashboard.putNumber("rotSpeed", turningSpeed);
       SmartDashboard.putNumber("fwdSpeed", forwardSpeed);

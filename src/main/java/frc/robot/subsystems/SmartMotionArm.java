@@ -133,6 +133,11 @@ public class SmartMotionArm extends SubsystemBase {
     m_pidController.setSmartMotionMaxAccel(maxAcc, smartMotionSlot);
     m_pidController.setSmartMotionAllowedClosedLoopError(allowedErr, smartMotionSlot);
 
+    /*
+    m_leadMotor.burnFlash();
+    m_followMotor.burnFlash();
+  */
+  
     // and our first angle goal
     setAngleGoal(minAngle);
   }

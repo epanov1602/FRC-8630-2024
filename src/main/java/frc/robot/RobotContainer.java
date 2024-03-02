@@ -114,7 +114,7 @@ public class RobotContainer {
     boolean fieldRelative = Constants.DriveConstants.kFieldRelative;
     if (Math.abs(m_driverJoystick.getLeftY()) > 0.5) {
       fieldRelative = false;
-      slowDownFactor = 0.5;
+      slowDownFactor = 0.75;
     }
 
     // copter layoyt otherwise: right stick for movement, left stick for rotation
@@ -130,11 +130,12 @@ public class RobotContainer {
     // let's put all the button bindings here, to keep them in one place
 
     // POV up: raise, aim and shoot at angle 37, and rpm 5700 (it does not have to be 5700 since the target is nearby, but this is for later)
-    Command raiseAndShoot = makeRaiseAndShootCommand(37, 5700);
-    m_driverJoystick.povUp().onTrue(raiseAndShoot);
+    //Command raiseAndShoot = makeRaiseAndShootCommand(37, 5700);
+    Command ejectAutomatically = makeConsistentEjectNoteCommand();
+    m_driverJoystick.povUp().onTrue(ejectAutomatically);
 
     // POV left: pick up the piece using arm and drivetrain (to automatically wiggle-drive towards it, maximizing the chances of pickup)
-    Command pickUpWithDriving = makePickupNoteCommand(true, 37); // raise arm to 37 degrees after pickup
+    Command pickUpWithDriving = makePickupNoteCommand(true, 80); // raise arm to 37 degrees after pickup
     m_driverJoystick.povLeft().whileTrue(pickUpWithDriving);
 
     // POV down: pick up the piece using just arm (but not automatically driving towards it)
@@ -146,10 +147,10 @@ public class RobotContainer {
     m_driverJoystick.povRight().onTrue(ejectNote);
 
     // raw movements of the manipulator, in order to troubleshoot it
-    m_manipulatorJoystick.y().onTrue(m_arm.runOnce(() -> m_arm.setAngleGoal(80)));
-    m_manipulatorJoystick.a().onTrue(m_arm.runOnce(() -> m_arm.setAngleGoal(ArmConstants.initialMinAngle)));
-    m_manipulatorJoystick.x().onTrue(m_shooter.runOnce(() -> m_shooter.setVelocityGoal(2000)));
-    m_manipulatorJoystick.b().onTrue(m_shooter.runOnce(() -> m_shooter.setVelocityGoal(0)));
+    m_driverJoystick.y().onTrue(m_arm.runOnce(() -> m_arm.setAngleGoal(80)));
+    m_driverJoystick.a().onTrue(m_arm.runOnce(() -> m_arm.setAngleGoal(ArmConstants.initialMinAngle)));
+    m_driverJoystick.x().onTrue(m_shooter.runOnce(() -> m_shooter.setVelocityGoal(2000)));
+    m_driverJoystick.b().onTrue(m_shooter.runOnce(() -> m_shooter.setVelocityGoal(0)));
   }
 
   private Command makeRaiseAndShootCommand(double aimArmAngle, double shootingFlywheelRpm) {
@@ -181,7 +182,7 @@ public class RobotContainer {
     Command ejectRoutine = new SequentialCommandGroup(dropToLowerAngle, raiseToPushAngle, raiseEjectAndPush);
 
     // one way to ensure that bumper is touching the amp wall is to be driving towards amp all this time
-    Command beDriving = m_drivetrain.run(() -> m_drivetrain.arcadeDrive(0.09, 0));
+    Command beDriving = m_drivetrain.run(() -> m_drivetrain.arcadeDrive(0.2, 0));
 
     // the result is "be driving until the eject routine is completed"
     return ejectRoutine.deadlineWith(beDriving);

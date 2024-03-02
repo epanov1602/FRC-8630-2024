@@ -4,6 +4,7 @@
 
 package frc.robot.subsystems;
 
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import static com.revrobotics.SparkLimitSwitch.Type.kNormallyOpen;
 
@@ -13,6 +14,7 @@ import static com.revrobotics.CANSparkLowLevel.MotorType.kBrushless;
 
 import com.revrobotics.CANSparkFlex;
 import com.revrobotics.SparkLimitSwitch;
+import com.revrobotics.CANSparkBase.IdleMode;
 
 public class Intake extends SubsystemBase {
   private static final int CANID = Constants.CANIDs.kIntakeMotor;
@@ -26,9 +28,13 @@ public class Intake extends SubsystemBase {
     m_motor = new CANSparkFlex(CANID, kBrushless);
     m_motor.restoreFactoryDefaults();
     m_motor.setInverted(true);//forward = intake
+    m_motor.setIdleMode(IdleMode.kBrake);
+  
     // todo N.O. for testing & development - N.C. for production KSM 2024-02-18
     m_forwardLimit = m_motor.getForwardLimitSwitch(kNormallyOpen);
     m_forwardLimit.enableLimitSwitch(true);
+
+    m_motor.burnFlash();
   }
 
   /**
@@ -93,6 +99,7 @@ public class Intake extends SubsystemBase {
   @Override
   public void periodic() {
     // This method will be called once per scheduler run
+    SmartDashboard.putBoolean("opticalSwitchPressed", m_forwardLimit.isPressed());
   }
 
   

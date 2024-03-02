@@ -53,7 +53,7 @@ public final class Constants {
   }
 
   public static final class DriveConstants {
-    public static final boolean kFieldRelative = false;
+    public static final boolean kFieldRelative = true;
     public static final boolean kCopterJoystickLayout = true;
 
     /****  Chassis configuration ****/

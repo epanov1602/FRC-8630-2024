@@ -75,6 +75,11 @@ public class SmartMotionShooter extends SubsystemBase {
     m_pidController.setSmartMotionMinOutputVelocity(initialMinVel, kSmartMotionSlot);
     m_pidController.setSmartMotionMaxAccel(initialMaxAcc, kSmartMotionSlot);
     m_pidController.setSmartMotionAllowedClosedLoopError(initialAllowedError, kSmartMotionSlot);
+
+    /*
+    m_leadMotor.burnFlash();
+    m_followMotor.burnFlash();
+    */
   }
 
   // will it work in autonomous? and let's test if it is needed at all
