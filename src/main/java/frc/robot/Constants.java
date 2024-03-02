@@ -12,6 +12,7 @@ import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.math.util.Units;
 
+
 /**
  * The Constants class provides a convenient place for teams to hold robot-wide
  * numerical or boolean
@@ -37,12 +38,14 @@ public final class Constants {
     public static final int kRearLeftTurningCanId = 6;
     public static final int kFrontRightTurningCanId = 7;
     public static final int kRearRightTurningCanId = 8;
-
+ 
     public static final int kIntakeMotor = 9;
     public static final int kShooterMotorA = 10;
     public static final int kShooterMotorB = 11;
     public static final int kArmMotorLeft = 12;
     public static final int kArmMotorRight = 13;
+  
+    public static final int kPDH = 23;
   }
 
   public final class OdometryConstants {

@@ -35,6 +35,7 @@ import frc.robot.commands.RequestArmAngle;
 import frc.robot.commands.ResetOdometry;
 import frc.robot.commands.Shoot;
 import frc.robot.subsystems.DriveSubsystem;
+import frc.robot.subsystems.PDH;
 import frc.robot.subsystems.LimelightCamera;
 import frc.robot.subsystems.SmartMotionArm;
 import frc.robot.subsystems.SmartMotionShooter;
@@ -73,6 +74,7 @@ public class RobotContainer {
   private SmartMotionArm m_arm = new SmartMotionArm();
   private SmartMotionShooter m_shooter = new SmartMotionShooter();
   private Intake m_intake = new Intake(); // TODO: once arm and shooter are integrated, maybe make a composite manipulator subsystem out of them?
+  private PDH m_pdh = new PDH();
 
   // all teleop controllers
   private CommandXboxController m_driverJoystick = new CommandXboxController(OIConstants.kDriverControllerPort);
@@ -143,10 +145,13 @@ public class RobotContainer {
     // - X brake for blocking,
     // - lower arm to dive under the chain
     // - raise arm back
-    m_driverJoystick.x().whileTrue(m_drivetrain.run(m_drivetrain::setX));
+    //m_driverJoystick.x().onTrue(m_drivetrain.run(m_drivetrain::setX));
     m_driverJoystick.a().onTrue(new RaiseArm(m_arm, ArmConstants.initialMinAngle, 0));
     m_driverJoystick.y().onTrue(new RaiseArm(m_arm, ArmConstants.kArmAgleToSaveEnergy, 0));
   
+    m_driverJoystick.x().onTrue(m_pdh.run(m_pdh::setSwitchableChannelOn));
+    m_driverJoystick.b().onTrue(m_pdh.run(m_pdh::setSwitchableChannelOff));
+
     // operator can: do all else with the arm
     var joystick = m_manipulatorJoystick;
     if (!Constants.OIConstants.useTwoJoysticks)
@@ -161,7 +166,6 @@ public class RobotContainer {
     // POV up: just shoot assuming we are up close, don't even look at the camera
     Command raiseAndShoot = makeRaiseAndShootCommand(31.5, 5700, "armShootAngle"); // can make it "armShootAngle" (another option: 37, 5700)
     joystick.povUp().onTrue(raiseAndShoot);
-
     // POV left: pick up using camera
     Command approachAndPickup = makeApproachNoteCommand(80); // raise arm to 80 degrees after pickup, to save energy
     joystick.povLeft().whileTrue(approachAndPickup);
@@ -340,5 +344,10 @@ public class RobotContainer {
   public static void testPeriodic() {
     // run testPeriodic() on each subsystem
     m_drivetrain.testPeriodic();
+  }
+
+  public void disabledInit() {
+    // run testInit() on each subsystem.
+    m_pdh.setSwitchableChannelOff();
   }
 }
