@@ -71,11 +71,4 @@ public final class FieldMap {
     return trajectory;
   }
 
-
-  private static List<Translation2d> m_aimingTargetAngleToArmAngle = List.of(
-    new Translation2d(12.73, 37),
-    new Translation2d(1.37, 50),
-    new Translation2d(2.53, 56)
-  );
-
 }

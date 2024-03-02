@@ -54,7 +54,7 @@ public final class Constants {
 
   public static final class DriveConstants {
     public static final boolean kFieldRelative = true;
-    public static final boolean kCopterJoystickLayout = true;
+    public static final boolean kCopterJoystickLayout = false;
 
     /****  Chassis configuration ****/
     public static final double kTrackWidth = Units.inchesToMeters(24.0);
