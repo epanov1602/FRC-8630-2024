@@ -260,7 +260,7 @@ public final class Constants {
    * Initial Arm values used at startup
    */
   public static final class ArmConstants {
-    public static final double kArmAngleToEjectIntoAmp = 94; // start ejecting note into amp from this angle
+    public static final double kArmAngleToEjectIntoAmp = 95; // start ejecting note into amp from this angle
     public static final double kArmAngleToPushIntoAmp = 80; // after ejecting note into, drop the arm to this angle to push the note in
     public static final double initialMinAngle = 11;
     public static final double initialMaxAngle = 100;
