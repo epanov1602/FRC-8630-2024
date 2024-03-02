@@ -50,7 +50,7 @@ public class IntakeNote extends Command {
     final double kArmAngleToleranceToPickUp = 5;
 
     // these three constants were calibrated by Brian, hope they work for everyone
-    final double kPickupForwardDriveSpeed = 0.25;
+    final double kPickupForwardDriveSpeed = 0.75;
     final double kPickupWiggleRotationSpeed = 0.2;
     final double kPickupWiggleIntervalSeconds = 0.5;
 

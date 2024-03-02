@@ -27,7 +27,7 @@ public class Intake extends SubsystemBase {
 
     m_motor = new CANSparkFlex(CANID, kBrushless);
     m_motor.restoreFactoryDefaults();
-    m_motor.setInverted(true);//forward = intake
+    m_motor.setInverted(false); //forward = intake
     m_motor.setIdleMode(IdleMode.kBrake);
   
     // todo N.O. for testing & development - N.C. for production KSM 2024-02-18
@@ -92,7 +92,7 @@ public class Intake extends SubsystemBase {
    * @param speed
    */
   private void setSpeed(double speed) {
-    m_motor.set(speed);
+    m_motor.set(-speed);
     System.out.println("Intake: " + speed);
   }
 

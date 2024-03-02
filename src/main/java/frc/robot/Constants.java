@@ -187,7 +187,7 @@ public final class Constants {
   }
 
   public static final class CameraConstants {
-    public static final Rotation2d kPickupCameraImageRotation = Rotation2d.fromDegrees(0); // should be -30 for camera mounted above the left swerve module 
+    public static final Rotation2d kPickupCameraImageRotation = Rotation2d.fromDegrees(-10); // should be -30 for camera mounted above the left swerve module 
     public static final String kPickupCameraName = "limelight-pickup";
 
     public static final Rotation2d kAimingCameraImageRotation = Rotation2d.fromDegrees(0); // should be -30 for camera mounted above the left swerve module 

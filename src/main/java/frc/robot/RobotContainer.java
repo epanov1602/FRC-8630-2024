@@ -96,6 +96,9 @@ public class RobotContainer {
       else
          m_aimingCamera.setLightOff();
     }));
+
+    m_pickupCamera.setPipeline(CameraConstants.kNotePipelineIndex);
+    m_aimingCamera.setPipeline(CameraConstants.kSpeakerPipelineIndex);
   }
 
   private void tankJoystickDrive() {
@@ -130,20 +133,19 @@ public class RobotContainer {
     // let's put all the button bindings here, to keep them in one place
 
     // POV up: raise, aim and shoot at angle 37, and rpm 5700 (it does not have to be 5700 since the target is nearby, but this is for later)
-    //Command raiseAndShoot = makeRaiseAndShootCommand(37, 5700);
-    Command ejectAutomatically = makeConsistentEjectNoteCommand();
-    m_driverJoystick.povUp().onTrue(ejectAutomatically);
+    Command raiseAndShoot = makeRaiseAndShootCommand(37, 5700);
+    m_driverJoystick.povUp().onTrue(raiseAndShoot);
 
     // POV left: pick up the piece using arm and drivetrain (to automatically wiggle-drive towards it, maximizing the chances of pickup)
-    Command pickUpWithDriving = makePickupNoteCommand(true, 80); // raise arm to 37 degrees after pickup
+    Command pickUpWithDriving = makeApproachNoteCommand(true, 80); // raise arm to 37 degrees after pickup
     m_driverJoystick.povLeft().whileTrue(pickUpWithDriving);
 
     // POV down: pick up the piece using just arm (but not automatically driving towards it)
-    Command pickUpWithoutDriving = makePickupNoteCommand(false, 37); // raise arm to 30 degrees after pickup
+    Command pickUpWithoutDriving = makePickupNoteCommand(true, 80); // raise arm to 30 degrees after pickup
     m_driverJoystick.povDown().whileTrue(pickUpWithoutDriving);
 
     // POV right: eject the note reliably
-    Command ejectNote = makeEjectNoteCommand();
+    Command ejectNote = makeConsistentEjectNoteCommand();
     m_driverJoystick.povRight().onTrue(ejectNote);
 
     // raw movements of the manipulator, in order to troubleshoot it
@@ -154,11 +156,12 @@ public class RobotContainer {
   }
 
   private Command makeRaiseAndShootCommand(double aimArmAngle, double shootingFlywheelRpm) {
-    Command raiseArm = new RaiseArm(m_arm, aimArmAngle);
+    Command dropArm = new RaiseArm(m_arm, aimArmAngle - 15);
+    Command raiseArm = new RaiseArm(m_arm, aimArmAngle, "raiseAngle");
 
     Command shoot = new Shoot(m_shooter, m_intake, shootingFlywheelRpm);
 
-    Command result = new SequentialCommandGroup(raiseArm, shoot);
+    Command result = new SequentialCommandGroup(dropArm, raiseArm, shoot);
     return result;
   }
 
@@ -188,7 +191,7 @@ public class RobotContainer {
     return ejectRoutine.deadlineWith(beDriving);
   }
 
-  private Command makePickupNoteCommand(boolean driveTowards, double armAngleAfterPickup) {
+  private Command makePickupNoteCommand(boolean driveTowards, double armAngleAfterPickup) {  
     // 1. take the note
     Command grabNote;
     if (driveTowards == true)
@@ -202,6 +205,16 @@ public class RobotContainer {
     // 0 + 1 + 2
     Command result = new SequentialCommandGroup(grabNote, unblockShooter);
     return result;
+  }
+
+  private Command makeApproachNoteCommand(boolean driveTowards, double armAngleAfterPickup) {
+    var whenToStop = new FollowVisualTarget.WhenToFinish(-16, 0, 0, false);
+    FollowVisualTarget follow = new FollowVisualTarget(
+      m_drivetrain, m_pickupCamera, 9, 0.05, 0.5,
+      CameraConstants.kPickupCameraImageRotation, whenToStop);
+    
+    var andThen = makePickupNoteCommand(driveTowards, armAngleAfterPickup);
+    return new SequentialCommandGroup(follow, andThen);
   }
 
   private boolean operatorUsingSticks() {

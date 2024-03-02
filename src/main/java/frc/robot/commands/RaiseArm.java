@@ -5,6 +5,7 @@
 package frc.robot.commands;
 
 import edu.wpi.first.wpilibj.AddressableLED;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Constants.ArmConstants;
 import frc.robot.subsystems.SmartMotionArm;
@@ -12,13 +13,20 @@ import frc.robot.subsystems.SmartMotionArm;
 public class RaiseArm extends Command {
   private static final double kAngleTolerance = 8; // degrees
 
+  private final String m_ntTargetAngleName;
   private final SmartMotionArm m_arm;
   private double m_targetAngle;
 
-  /** Creates a new RaiseArm. */
+
   public RaiseArm(SmartMotionArm arm, double targetAngle) {
+    this(arm, targetAngle, null);
+  }
+
+  /** Creates a new RaiseArm. */
+  public RaiseArm(SmartMotionArm arm, double targetAngle, String networkTablesAngleName) {
     m_arm = arm;
     m_targetAngle = targetAngle;
+    m_ntTargetAngleName = networkTablesAngleName;
   
     // if target angle was specified too low or too high, bring it into limits
     if (m_targetAngle > ArmConstants.initialMaxAngle)
@@ -27,11 +35,21 @@ public class RaiseArm extends Command {
       m_targetAngle = ArmConstants.initialMinAngle;
   
     addRequirements(arm);
+
+    if (m_ntTargetAngleName != null)
+      SmartDashboard.setDefaultNumber(m_ntTargetAngleName, targetAngle);
   }
 
   // Called when the command is initially scheduled.
   @Override
   public void initialize() {
+    if (m_ntTargetAngleName != null) {
+      m_targetAngle = SmartDashboard.getNumber(m_ntTargetAngleName, m_targetAngle);
+      if (m_targetAngle > ArmConstants.initialMaxAngle)
+        m_targetAngle = ArmConstants.initialMaxAngle;
+      if (m_targetAngle < ArmConstants.initialMinAngle)
+        m_targetAngle = ArmConstants.initialMinAngle;
+    }
     m_arm.setAngleGoal(m_targetAngle);
   }
 
