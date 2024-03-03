@@ -6,6 +6,7 @@ import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.util.WPIUtilJNI;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
  
@@ -15,9 +16,9 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 public class LimelightCamera extends SubsystemBase {
   protected NetworkTable m_table;
-  private NetworkTableEntry m_tx, m_ty, m_ta, m_pipeline, m_ledMode, m_camMode;
+  private NetworkTableEntry m_tx, m_ty, m_ta, m_pipeline, m_ledMode, m_camMode, m_percentTimeSeen;
   private boolean m_driverCameraMode = true;
-  private double m_exposureWindowSeconds = 0.2;
+  private double m_exposureWindowSeconds = 0.4;
   private double m_percentageOfTimeSeen = 0;
   private double m_lastTimeLooked = 0;
 
@@ -36,7 +37,7 @@ public class LimelightCamera extends SubsystemBase {
   }
 
   public double getPercentageOfTimeTargetDetected() { return m_percentageOfTimeSeen; }
-  public boolean isTargetRecentlySeen() { return m_percentageOfTimeSeen > 0.5; }
+  public boolean isTargetRecentlySeen() { return m_percentageOfTimeSeen > 0.25; }
 
   public int getPipeline() { return (int)m_pipeline.getDouble(-1); }
   public void setPipeline(int pipeline) { m_pipeline.setDouble(pipeline); m_percentageOfTimeSeen = 0; }
@@ -56,6 +57,7 @@ public class LimelightCamera extends SubsystemBase {
     m_pipeline = m_table.getEntry("pipeline");
     m_ledMode = m_table.getEntry("ledMode");
     m_camMode = m_table.getEntry("camMode");
+    m_percentTimeSeen = m_table.getEntry("percentSeen");
     m_tx = m_table.getEntry("tx");
     m_ty = m_table.getEntry("ty");
     m_ta = m_table.getEntry("ta");
@@ -91,5 +93,6 @@ public class LimelightCamera extends SubsystemBase {
       if (m_percentageOfTimeSeen < 0)
         m_percentageOfTimeSeen = 0;
     }
+    m_percentTimeSeen.setNumber(m_percentageOfTimeSeen);
   }
 }

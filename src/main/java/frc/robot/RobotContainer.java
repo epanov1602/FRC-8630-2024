@@ -132,33 +132,38 @@ public class RobotContainer {
   private void configureButtonBindings() {
     // let's put all the button bindings here, to keep them in one place
 
-    // POV up: raise, aim and shoot at angle 37, and rpm 5700 (it does not have to be 5700 since the target is nearby, but this is for later)
+    // POV up: raise, aim and shoot at angle 36, and rpm 5700 (it does not have to be 5700 since the target is nearby, but this is for later)
     
     /*
     // this works for shooting from close distance, but uses 5700 rpm
     Command raiseAndShoot = makeRaiseAndShootCommand(36, 5700);
     */
+  
+    var joystick = m_driverJoystick;
 
-    Command raiseAndShoot = makeRaiseAndShootCommand(10, 3000, null); // can make it "armShootAngle"
-    m_manipulatorJoystick.povUp().onTrue(raiseAndShoot);
+    //Command raiseAndShoot = makeRaiseAndShootCommand(30.5, 2850, "armShootAngle"); // can make it "armShootAngle"
+    //Command aimAndShoot = makeAimAndShootCommand(30.5, 2850, "armShootAngle"); // can make it "armShootAngle"
+
+    Command raiseAndShootFromFar = makeRaiseAndShootCommand(53, 5700, "armShootAngle"); // can make it "armShootAngle"
+    joystick.povUp().onTrue(raiseAndShootFromFar);
 
     // POV left: pick up the piece using arm and drivetrain (to automatically wiggle-drive towards it, maximizing the chances of pickup)
     Command pickUpWithDriving = makeApproachNoteCommand(true, 80); // raise arm to 37 degrees after pickup
-    m_manipulatorJoystick.povLeft().whileTrue(pickUpWithDriving);
+    joystick.povLeft().whileTrue(pickUpWithDriving);
 
     // POV down: pick up the piece using just arm (but not automatically driving towards it)
     Command pickUpWithoutDriving = makePickupNoteCommand(true, 80); // raise arm to 30 degrees after pickup
-    m_manipulatorJoystick.povDown().whileTrue(pickUpWithoutDriving);
+    joystick.povDown().whileTrue(pickUpWithoutDriving);
 
     // POV right: eject the note reliably
     Command ejectNote = makeConsistentEjectNoteCommand();
-    m_manipulatorJoystick.povRight().onTrue(ejectNote);
+    joystick.povRight().onTrue(ejectNote);
 
     // raw movements of the manipulator, in order to troubleshoot it
-    m_manipulatorJoystick.y().onTrue(m_arm.runOnce(() -> m_arm.setAngleGoal(80)));
-    m_manipulatorJoystick.a().onTrue(m_arm.runOnce(() -> m_arm.setAngleGoal(ArmConstants.initialMinAngle)));
-    m_manipulatorJoystick.x().onTrue(m_shooter.runOnce(() -> m_shooter.setVelocityGoal(2000)));
-    m_manipulatorJoystick.b().onTrue(m_shooter.runOnce(() -> m_shooter.setVelocityGoal(0)));
+    joystick.y().onTrue(m_arm.runOnce(() -> m_arm.setAngleGoal(80)));
+    joystick.a().onTrue(m_arm.runOnce(() -> m_arm.setAngleGoal(ArmConstants.initialMinAngle)));
+    joystick.x().onTrue(m_shooter.runOnce(() -> m_shooter.setVelocityGoal(2500)));
+    joystick.b().onTrue(m_shooter.runOnce(() -> m_shooter.setVelocityGoal(0)));
   }
 
   private Command makeRaiseAndShootCommand(double aimArmAngle, double shootingFlywheelRpm, String setAngleFromSmartDashboardKey) {
@@ -167,8 +172,28 @@ public class RobotContainer {
 
     Command shoot = new Shoot(m_shooter, m_intake, shootingFlywheelRpm);
 
-    Command result = new SequentialCommandGroup(dropArm, raiseArm, shoot);
+    Command raiseToSaveEnergy = new RaiseArm(m_arm, 85, null);
+
+    Command result = new SequentialCommandGroup(dropArm, raiseArm, shoot, raiseToSaveEnergy);
     return result;
+  }
+
+  private Command makeAimAndShootCommand(double aimArmAngle, double shootingFlywheelRpm, String setAngleFromSmartDashboardKey) {
+    // very close to target: ty=+12, tx=-12
+    // 1.5 robot lenghts away: ty=0, tx=-7
+    // very far away: ty=-5.5, tx=-3
+    double approachSpeed = -0.3, seekingSpeed = 0.1; // set them to zero if you want to just aim
+    var dontDriveJustAim = new FollowVisualTarget.WhenToFinish(0, 12, 0, true);
+    var aim = new FollowVisualTarget(
+      m_drivetrain, m_aimingCamera, CameraConstants.kSpeakerPipelineIndex,
+      seekingSpeed, approachSpeed,
+      CameraConstants.kAimingCameraImageRotation,
+      dontDriveJustAim);
+
+    var raiseAndShoot = makeRaiseAndShootCommand(aimArmAngle, shootingFlywheelRpm, setAngleFromSmartDashboardKey);
+    var raiseAndShootIfFound = raiseAndShoot.onlyIf(aim::getEndedWithTarget);
+
+    return new SequentialCommandGroup(aim, raiseAndShootIfFound);
   }
 
   private Command makeEjectNoteCommand() {
@@ -214,15 +239,17 @@ public class RobotContainer {
   }
 
   private Command makeApproachNoteCommand(boolean driveTowards, double armAngleAfterPickup) {
+    var raiseArm = new RaiseArm(m_arm, 80);
+
     var whenToStop = new FollowVisualTarget.WhenToFinish(-16, 0, 0, false);
 
-    var follow = new FollowVisualTarget(
+    var approachAndAim = new FollowVisualTarget(
       m_drivetrain, m_pickupCamera, CameraConstants.kNotePipelineIndex, 0.05, 0.5,
       CameraConstants.kPickupCameraImageRotation, whenToStop);
     
-    var andThen = makePickupNoteCommand(driveTowards, armAngleAfterPickup);
+    var thenPickup = makePickupNoteCommand(driveTowards, armAngleAfterPickup);
 
-    return new SequentialCommandGroup(follow, andThen);
+    return new SequentialCommandGroup(raiseArm, approachAndAim, thenPickup);
   }
 
   private boolean operatorUsingSticks() {

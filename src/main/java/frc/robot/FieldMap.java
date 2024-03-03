@@ -71,4 +71,13 @@ public final class FieldMap {
     return trajectory;
   }
 
+
+  /* firing table:
+   * aimAngleToFiringAngle:
+   *   12.5: 37
+   *   4.98: 45
+   *   5.45: 44.5
+   *   0: 52
+   */
+
 }

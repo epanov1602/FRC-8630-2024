@@ -26,23 +26,25 @@ public class SmartMotionShooter extends SubsystemBase {
   private static double m_velocityGoal = 0;
 
   public double getVelocityGoal() {
-    return m_velocityGoal;
+    return -m_velocityGoal;
   }
 
   public double getVelocity() {
-    return m_encoder.getVelocity();
+    return -m_encoder.getVelocity();
   }
 
   /*
    * Set the veloicty goal in motor RPM
    */
   public void setVelocityGoal(double rpm) {
-    System.out.println("setVelocityGoal(" + rpm + ")");
+    System.out.println("Shooter::setVelocityGoal(" + rpm + ")");
+    // dirty hack: reverse the velocity goal, but not the motor direction
+    rpm = -rpm;
+  
     if (rpm < initialMinVel || rpm > initialMaxVel) {
       System.out.println("Shooter Illegal Velocity Goal: " + rpm);
       return;
     }
-    System.out.println("Shooter: " + rpm);
     m_velocityGoal = rpm;
     m_pidController.setReference(m_velocityGoal, CANSparkFlex.ControlType.kVelocity);
   }
@@ -51,7 +53,7 @@ public class SmartMotionShooter extends SubsystemBase {
   public SmartMotionShooter() {
     m_leadMotor = new CANSparkFlex(Constants.CANIDs.kShooterMotorA, MotorType.kBrushless);
     m_leadMotor.restoreFactoryDefaults();
-    m_leadMotor.setInverted(true);
+    m_leadMotor.setInverted(false);
     m_leadMotor.setIdleMode(IdleMode.kCoast);
     
     m_followMotor = new CANSparkFlex(Constants.CANIDs.kShooterMotorB, MotorType.kBrushless);

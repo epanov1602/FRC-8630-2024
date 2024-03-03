@@ -67,10 +67,12 @@ public class RaiseArm extends Command {
   // Returns true when the command should end.
   @Override
   public boolean isFinished() {
+    if (m_arm.getAngleVelocity() < 0)
+      return false; // if the arm is on its way down, it will overshoot and later come back; not finished yet
     double distanceToTarget = Math.abs(m_arm.getAngle() - m_targetAngle);
-    if (distanceToTarget < kAngleTolerance)
-      return true;
-    else
+    if (distanceToTarget > kAngleTolerance)
       return false;
+    // otherwise, we arrived
+    return true;
   }
 }

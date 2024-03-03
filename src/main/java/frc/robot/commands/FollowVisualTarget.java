@@ -15,7 +15,7 @@ import frc.robot.Constants.AutoConstants;
 import frc.robot.subsystems.DriveSubsystem;
 
 public class FollowVisualTarget extends Command {
-  public static double kDirectionToleranceDegrees = 2 * AutoConstants.kDirectionToleranceDegrees;
+  public static double kDirectionToleranceDegrees = AutoConstants.kDirectionToleranceDegrees;
 
   private final DriveSubsystem m_drivetrain;
   private final LimelightCamera m_camera;
@@ -70,6 +70,8 @@ public class FollowVisualTarget extends Command {
     m_drivetrain = drivetrain;
     m_camera = camera;
     m_targetPipelineIndex = targetPipelineIndex;
+    if (Math.abs(seekingTurnSpeed) > AutoConstants.kMaxTurningSpeedForVisualTargets)
+      seekingTurnSpeed = Math.signum(seekingTurnSpeed) * AutoConstants.kMaxTurningSpeedForVisualTargets;
     m_seekingTurnSpeed = seekingTurnSpeed;
     m_approachSpeed = approachSpeed;
     m_imageRotation = rotateImageToLeft;
@@ -96,14 +98,21 @@ public class FollowVisualTarget extends Command {
     if (targetX == 0) {
       // target not found: stop or seek?
       if (m_seekingTurnSpeed == 0 && m_whenToFinish.m_finishIfNotMoving) {
-        System.out.println("stopping because target is not seen anymore");
-        m_timeToStop = true;
+        if (m_camera.getPercentageOfTimeTargetDetected() < 0.25) {
+          System.out.println("stopping because target is not seen anymore");
+          m_timeToStop = true;
+        } else {
+          System.out.println("target is not seen now, but we keep watching");
+          double seekSpeed = m_lastSeenTargetX > 0 ? AutoConstants.kMinTurningSpeed : -AutoConstants.kMinTurningSpeed;
+          m_drivetrain.arcadeDrive(0, seekSpeed, false);
+        }
         return;
       }
+      System.out.println("target is not seen now, but we keep looking for it");
       double seekingDirection = 1;
       if (m_lastSeenTargetX > 0)
         seekingDirection = -1;
-      m_drivetrain.drive(0, 0, m_seekingTurnSpeed * seekingDirection, false, true);
+      m_drivetrain.arcadeDrive(0, m_seekingTurnSpeed * seekingDirection, false);
     } else {
       // target found: turn towards it
       double degreesLeftToTurn = -targetX;
@@ -113,6 +122,8 @@ public class FollowVisualTarget extends Command {
       // should we be turning towards it? or just moving straight?
       if (turningSpeed < Constants.AutoConstants.kMinTurningSpeed)
         turningSpeed = Constants.AutoConstants.kMinTurningSpeed;
+      if (turningSpeed > Constants.AutoConstants.kMaxTurningSpeedForVisualTargets && m_seekingTurnSpeed == 0) // only applies when seeking is disabled
+        turningSpeed = Constants.AutoConstants.kMaxTurningSpeedForVisualTargets;
       if (turningSpeed > Constants.AutoConstants.kMaxTurningSpeed)
         turningSpeed = Constants.AutoConstants.kMaxTurningSpeed;
       if (Math.abs(degreesLeftToTurn) < kDirectionToleranceDegrees)
@@ -157,7 +168,7 @@ public class FollowVisualTarget extends Command {
         }
       }
       if (forwardSpeed == 0 && turningSpeed == 0 && m_whenToFinish.m_finishIfNotMoving) {
-        System.out.println("stopping because nothing to do");
+        System.out.println("stopping because we see the target and there are no further moves to make");
         m_timeToStop = true;
       }
 

@@ -61,6 +61,10 @@ public class SmartMotionArm extends SubsystemBase {
     return m_encoder.getPosition();
   }
 
+  public double getAngleVelocity() {
+    return m_encoder.getVelocity();
+  }
+
   /*
    * Set the position goal in angle, >= 0
    */
@@ -89,9 +93,6 @@ public class SmartMotionArm extends SubsystemBase {
     m_followMotor.restoreFactoryDefaults();
     m_followMotor.follow(m_leadMotor, true);
     m_followMotor.setIdleMode(IdleMode.kBrake);
-
-    // leadMotor.burnFlash(); (should we do this? you can only do it several thousand times before it gives up)
-    // followMotor.burnFlash(); (should we do this? you can only do it several thousand times before it gives up)
 
     // initialze PID controller and encoder objects
     m_pidController = m_leadMotor.getPIDController();
