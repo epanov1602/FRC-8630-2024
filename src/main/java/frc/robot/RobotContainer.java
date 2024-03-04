@@ -145,13 +145,13 @@ public class RobotContainer {
     //Command approachAndShoot = makeApproachAndShootCommand(30.5, 2850, "armShootAngle"); // can make it "armShootAngle"
     joystick.povUp().onTrue(raiseAndShoot);
 
-    // POV left: pick up the piece using arm and drivetrain (to automatically wiggle-drive towards it, maximizing the chances of pickup)
-    Command pickUpWithDriving = makeApproachNoteCommand(true, 80); // raise arm to 37 degrees after pickup
-    joystick.povLeft().whileTrue(pickUpWithDriving);
+    // POV left: pick up using camera
+    Command approachAndPickup = makeApproachNoteCommand(80); // raise arm to 80 degrees after pickup, to save energy
+    joystick.povLeft().whileTrue(approachAndPickup);
 
-    // POV down: pick up the piece using just arm (but not automatically driving towards it)
-    Command pickUpWithoutDriving = makePickupNoteCommand(true, 80); // raise arm to 30 degrees after pickup
-    joystick.povDown().whileTrue(pickUpWithoutDriving);
+    // POV down: pick up without using camera (by just driving towards the note until it is picked up)
+    Command pickUpWithDrivingTowards = makePickupNoteCommand(true, 80); // raise arm to 80 degrees after pickup, to save energy
+    joystick.povDown().whileTrue(pickUpWithDrivingTowards);
 
     // POV right: eject the note reliably
     Command ejectNote = makeConsistentEjectNoteCommand();
@@ -237,7 +237,7 @@ public class RobotContainer {
     return result;
   }
 
-  private Command makeApproachNoteCommand(boolean driveTowards, double armAngleAfterPickup) {
+  private Command makeApproachNoteCommand(double armAngleAfterPickup) {
     var raiseArm = new RaiseArm(m_arm, 80);
 
     var whenToStop = new FollowVisualTarget.WhenToFinish(-16, 0, 0, false);
@@ -246,7 +246,7 @@ public class RobotContainer {
       m_drivetrain, m_pickupCamera, CameraConstants.kNotePipelineIndex, 0.05, 0.5,
       CameraConstants.kPickupCameraImageRotation, whenToStop);
     
-    var thenPickup = makePickupNoteCommand(driveTowards, armAngleAfterPickup);
+    var thenPickup = makePickupNoteCommand(true, armAngleAfterPickup);
 
     return new SequentialCommandGroup(raiseArm, approachAndAim, thenPickup);
   }

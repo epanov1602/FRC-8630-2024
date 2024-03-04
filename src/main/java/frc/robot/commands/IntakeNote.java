@@ -47,7 +47,7 @@ public class IntakeNote extends Command {
   public void execute() {
     // if the arm within 3 degrees of pickup angle, start moving towards gamepiece and wiggling right and left
 
-    final double kArmAngleToleranceToPickUp = 5;
+    final double kArmAngleToleranceToPickUp = 10;
 
     // these three constants were calibrated by Brian, hope they work for everyone
     final double kPickupForwardDriveSpeed = 0.75;
