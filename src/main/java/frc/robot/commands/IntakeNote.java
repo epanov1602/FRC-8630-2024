@@ -50,7 +50,7 @@ public class IntakeNote extends Command {
     final double kArmAngleToleranceToPickUp = 10;
 
     // these three constants were calibrated by Brian, hope they work for everyone
-    final double kPickupForwardDriveSpeed = 0.75;
+    final double kPickupForwardDriveSpeed = 0.75; // any reason to not use max speed here?
     final double kPickupWiggleRotationSpeed = 0.2;
     final double kPickupWiggleIntervalSeconds = 0.5;
 
@@ -65,7 +65,7 @@ public class IntakeNote extends Command {
   @Override
   public void end(boolean interrupted) {
     m_intake.stop(); // if the command was interrupted, that motor might still be working and we need to stop it
-    if (m_arm != null && m_armAngleAfterIntaking != 0)
+    if (m_arm != null && m_armAngleAfterIntaking != 0 && m_intake.isNoteInside())
       m_arm.setAngleGoal(m_armAngleAfterIntaking);
     if (m_drivetrain != null)
       m_drivetrain.resetWiggleDrive();
