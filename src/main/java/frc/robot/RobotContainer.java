@@ -88,10 +88,10 @@ public class RobotContainer {
     else
       m_drivetrain.setDefaultCommand(new RunCommand(this::tankJoystickDrive, m_drivetrain));
   
-    // the default command for the aiming camera is to change the LEDs depending on whether the gamepiece is inside of intake or not
+    // the default command for the aiming camera is to change the LEDs depending on whether we are close enough to fire
     // (default command only runs if no other command needs to run)
     m_aimingCamera.setDefaultCommand(m_aimingCamera.run(() -> {
-      if (m_intake.isNoteInside())
+      if (m_aimingCamera.getY() > 0) // if target Y angle altitude is >0, we are close enough to fire from this distance ~successfully
          m_aimingCamera.setLightOn();
       else
          m_aimingCamera.setLightOff();
@@ -102,7 +102,7 @@ public class RobotContainer {
   }
 
   private void tankJoystickDrive() {
-    // tank layoyt: left stick for movement, right stick for rotation
+    // tank layout: left stick for movement, right stick for rotation
     m_drivetrain.drive(
         -MathUtil.applyDeadband(m_driverJoystick.getLeftY(), OIConstants.kDriveDeadband),
         -MathUtil.applyDeadband(m_driverJoystick.getLeftX(), OIConstants.kDriveDeadband),
@@ -139,13 +139,11 @@ public class RobotContainer {
     Command raiseAndShoot = makeRaiseAndShootCommand(36, 5700);
     */
   
-    var joystick = m_driverJoystick;
+    var joystick = m_manipulatorJoystick;
 
-    //Command raiseAndShoot = makeRaiseAndShootCommand(30.5, 2850, "armShootAngle"); // can make it "armShootAngle"
-    //Command aimAndShoot = makeAimAndShootCommand(30.5, 2850, "armShootAngle"); // can make it "armShootAngle"
-
-    Command raiseAndShootFromFar = makeRaiseAndShootCommand(53, 5700, "armShootAngle"); // can make it "armShootAngle"
-    joystick.povUp().onTrue(raiseAndShootFromFar);
+    Command raiseAndShoot = makeRaiseAndShootCommand(30.5, 2850, "armShootAngle"); // can make it "armShootAngle" (another option: 37, 5700)
+    //Command approachAndShoot = makeApproachAndShootCommand(30.5, 2850, "armShootAngle"); // can make it "armShootAngle"
+    joystick.povUp().onTrue(raiseAndShoot);
 
     // POV left: pick up the piece using arm and drivetrain (to automatically wiggle-drive towards it, maximizing the chances of pickup)
     Command pickUpWithDriving = makeApproachNoteCommand(true, 80); // raise arm to 37 degrees after pickup
@@ -167,18 +165,19 @@ public class RobotContainer {
   }
 
   private Command makeRaiseAndShootCommand(double aimArmAngle, double shootingFlywheelRpm, String setAngleFromSmartDashboardKey) {
-    Command dropArm = new RaiseArm(m_arm, aimArmAngle - 15);
+    Command dropArm = new RaiseArm(m_arm, aimArmAngle - 15); // TODO: maybe comment out dropArm, and see if determinism breaks?
     Command raiseArm = new RaiseArm(m_arm, aimArmAngle, setAngleFromSmartDashboardKey);
-
     Command shoot = new Shoot(m_shooter, m_intake, shootingFlywheelRpm);
+    Command raiseAfterwardsToSaveEnergy = new RequestArmAngle(m_arm, 85);
 
-    Command raiseToSaveEnergy = new RaiseArm(m_arm, 85, null);
+    Command result = new SequentialCommandGroup(dropArm, raiseArm, shoot, raiseAfterwardsToSaveEnergy);
 
-    Command result = new SequentialCommandGroup(dropArm, raiseArm, shoot, raiseToSaveEnergy);
-    return result;
+    Command keepWheelsOnXBrake = m_drivetrain.run(m_drivetrain::setX); // keep wheels on X brake, otherwise opponent robots can easily disrupt aiming
+
+    return result.deadlineWith(keepWheelsOnXBrake);
   }
 
-  private Command makeAimAndShootCommand(double aimArmAngle, double shootingFlywheelRpm, String setAngleFromSmartDashboardKey) {
+  private Command makeApproachAndShootCommand(double aimArmAngle, double shootingFlywheelRpm, String setAngleFromSmartDashboardKey) {
     // very close to target: ty=+12, tx=-12
     // 1.5 robot lenghts away: ty=0, tx=-7
     // very far away: ty=-5.5, tx=-3

@@ -83,7 +83,7 @@ public class SmartMotionArm extends SubsystemBase {
   public SmartMotionArm() {
     m_leadMotor = new CANSparkMax(Constants.CANIDs.kArmMotorRight, MotorType.kBrushless);
     m_leadMotor.restoreFactoryDefaults();
-    m_leadMotor.setInverted(true);
+    m_leadMotor.setInverted(true); // warning: the inverted state of a motor might not survive a brownout (maybe setInverted every time setAngleGoal is called?)
     m_leadMotor.setIdleMode(IdleMode.kBrake);
 
     m_forwardLimit = m_leadMotor.getForwardLimitSwitch(kNormallyOpen);
