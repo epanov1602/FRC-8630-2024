@@ -4,6 +4,8 @@
 
 package frc.robot.commands;
 
+import java.io.Console;
+
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -191,8 +193,15 @@ public class FollowVisualTarget extends Command {
   @Override
   public void end(boolean interrupted) {
       m_drivetrain.arcadeDrive(0, 0);
-      m_endedWithTarget = m_camera.getPercentageOfTimeTargetDetected() > 0.5;
+      if (m_camera.getPercentageOfTimeTargetDetected() > 0.5)
+        m_endedWithTarget = true; // if we just switched to the new pipeline and finished immediately, the percentage counter didn't update yet
       m_camera.setPipeline(m_lastPipelineIndex);
+      if (m_endedWithTarget)
+        System.out.println("ended with target");
+      else
+        System.out.println("did not end with target");
+      if (interrupted)
+        System.out.println("in fact, got interrupted");
   }
 
   // Returns true when the command should end.
