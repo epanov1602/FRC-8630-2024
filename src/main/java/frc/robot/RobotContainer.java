@@ -86,11 +86,13 @@ public class RobotContainer {
     // Configure the button bindings
     configureButtonBindings();
 
+    Command setDefaultCameraPipelines = m_pickupCamera.runOnce(this::setDefaultCameraPipelines);
+
     // Configure default teleop commands
     if (Constants.DriveConstants.kCopterJoystickLayout)
-      m_drivetrain.setDefaultCommand(new RunCommand(this::copterJoystickDrive, m_drivetrain));
+      m_drivetrain.setDefaultCommand(setDefaultCameraPipelines.andThen(new RunCommand(this::copterJoystickDrive, m_drivetrain)));
     else
-      m_drivetrain.setDefaultCommand(new RunCommand(this::tankJoystickDrive, m_drivetrain));
+      m_drivetrain.setDefaultCommand(setDefaultCameraPipelines.andThen(new RunCommand(this::tankJoystickDrive, m_drivetrain)));
   
     // the default command for the aiming camera is to change the LEDs depending on whether we are close enough to fire
     // (default command only runs if no other command needs to run)
@@ -101,6 +103,10 @@ public class RobotContainer {
          m_aimingCamera.setLightOff();
     }));
 
+    setDefaultCameraPipelines();
+  }
+
+  private void setDefaultCameraPipelines() {
     m_pickupCamera.setPipeline(CameraConstants.kNotePipelineIndex);
     m_aimingCamera.setPipeline(CameraConstants.kSpeakerPipelineIndex);
   }
@@ -139,11 +145,13 @@ public class RobotContainer {
     // - lower arm to dive under the chain
     // - raise arm back
     m_driverJoystick.x().whileTrue(m_drivetrain.run(m_drivetrain::setX));
-    m_driverJoystick.a().onTrue(new RaiseArm(m_arm, ArmConstants.initialMinAngle));
-    m_driverJoystick.y().onTrue(new RaiseArm(m_arm, ArmConstants.kArmAgleToSaveEnergy));
+    m_driverJoystick.a().onTrue(new RaiseArm(m_arm, ArmConstants.initialMinAngle, 0));
+    m_driverJoystick.y().onTrue(new RaiseArm(m_arm, ArmConstants.kArmAgleToSaveEnergy, 0));
   
     // operator can: do all else with the arm
     var joystick = m_manipulatorJoystick;
+    if (!DriveConstants.useTwoJoysticks)
+      joystick = m_driverJoystick; // if not using two joysticks, use driver joystick for both driving and arm
 
     Command approachAndShoot = makeApproachAndShootCommand(31.5, 2850, "armShootAngle"); // can make it "armShootAngle"
     joystick.rightBumper().whileTrue(approachAndShoot);
@@ -178,8 +186,8 @@ public class RobotContainer {
   }
 
   private Command makeRaiseAndShootCommand(double aimArmAngle, double shootingFlywheelRpm, String setAngleFromSmartDashboardKey) {
-    Command dropArm = new RaiseArm(m_arm, aimArmAngle - 15); // TODO: maybe comment out dropArm, and see if determinism breaks?
-    Command raiseArm = new RaiseArm(m_arm, aimArmAngle, null, setAngleFromSmartDashboardKey);
+    Command dropArm = new RaiseArm(m_arm, aimArmAngle - 15, 0); // TODO: remove this hack, after arm PID coefficients are tuned
+    Command raiseArm = new RaiseArm(m_arm, aimArmAngle, ArmConstants.kExtraDelayForOscillationsToStop, null, setAngleFromSmartDashboardKey);
     Command shoot = new Shoot(m_shooter, m_intake, m_arm, shootingFlywheelRpm);
     Command raiseAfterwardsToSaveEnergy = new RequestArmAngle(m_arm, ArmConstants.kArmAgleToSaveEnergy);
 
@@ -224,8 +232,8 @@ public class RobotContainer {
     double lowestPossibleFiringAngle = 37;
     double shootingFlywheelRpm = 5700;
 
-    Command dropArm = new RaiseArm(m_arm, initialDropAngle); // TODO: maybe comment out dropArm, and see if determinism breaks?
-    Command raiseArm = new RaiseArm(m_arm, lowestPossibleFiringAngle, this::getGoodFiringAngle, null);
+    Command dropArm = new RaiseArm(m_arm, initialDropAngle, 0); // TODO: maybe comment out dropArm, and see if determinism breaks?
+    Command raiseArm = new RaiseArm(m_arm, lowestPossibleFiringAngle, ArmConstants.kExtraDelayForOscillationsToStop, this::getGoodFiringAngle, null);
     Command shoot = new Shoot(m_shooter, m_intake, m_arm, shootingFlywheelRpm);
     Command raiseAfterwardsToSaveEnergy = new RequestArmAngle(m_arm, ArmConstants.kArmAgleToSaveEnergy);
     Command raiseArmAndShoot = new SequentialCommandGroup(dropArm, raiseArm, shoot, raiseAfterwardsToSaveEnergy);
@@ -253,7 +261,7 @@ public class RobotContainer {
 
   private Command makeEjectNoteCommand() {
     double ejectIntakeSpeed = 0.17; // is 0.17 a good speed to eject the note?
-    Command raiseArm = new RaiseArm(m_arm, ArmConstants.kArmAngleToEjectIntoAmp); // is 94 a good angle to eject the note into the amp reliably? 
+    Command raiseArm = new RaiseArm(m_arm, ArmConstants.kArmAngleToEjectIntoAmp, 0); // is 94 a good angle to eject the note into the amp reliably? 
     Command ejectAndPush = new EjectNote(m_intake, m_arm, ejectIntakeSpeed, ArmConstants.kArmAngleToPushIntoAmp); // is 80 a good angle for pushing the note in
     Command result = new SequentialCommandGroup(raiseArm, ejectAndPush);
     return result;
@@ -261,13 +269,13 @@ public class RobotContainer {
 
   private Command makeConsistentEjectNoteCommand() {
     double ejectIntakeSpeed = 0.17; // is 0.17 a good speed to eject the note?
-    Command raiseArm = new RaiseArm(m_arm, ArmConstants.kArmAngleToEjectIntoAmp); // is 94 a good angle to eject the note into the amp reliably? 
+    Command raiseArm = new RaiseArm(m_arm, ArmConstants.kArmAngleToEjectIntoAmp, 0); // is 94 a good angle to eject the note into the amp reliably? 
     Command ejectAndPush = new EjectNote(m_intake, m_arm, ejectIntakeSpeed, ArmConstants.kArmAngleToPushIntoAmp); // is 80 a good angle for pushing the note in
     Command raiseEjectAndPush = new SequentialCommandGroup(raiseArm, ejectAndPush);
 
     // to do it more reliably, ensure that the bumper has fully approached the amp *and* ensure consistent starting angle 
-    Command dropToLowerAngle = new RaiseArm(m_arm, ArmConstants.kArmAngleToPushIntoAmp - 5); // 5 degrees lower
-    Command raiseToPushAngle = new RaiseArm(m_arm, ArmConstants.kArmAngleToPushIntoAmp); // good starting angle
+    Command dropToLowerAngle = new RaiseArm(m_arm, ArmConstants.kArmAngleToPushIntoAmp - 5, 0); // TODO: remove, this is a hack until arm PID coeffs are tuned
+    Command raiseToPushAngle = new RaiseArm(m_arm, ArmConstants.kArmAngleToPushIntoAmp, 0); // good starting angle
     Command ejectRoutine = new SequentialCommandGroup(dropToLowerAngle, raiseToPushAngle, raiseEjectAndPush);
 
     // one way to ensure that bumper is touching the amp wall is to be driving towards amp all this time
@@ -294,7 +302,7 @@ public class RobotContainer {
   }
 
   private Command makeApproachNoteCommand(double armAngleAfterPickup) {
-    var raiseArm = new RaiseArm(m_arm, 80);
+    var raiseArm = new RaiseArm(m_arm, 80, 0);
 
     var whenToStop = new FollowVisualTarget.WhenToFinish(-16, 0, 0, false);
 
@@ -320,7 +328,7 @@ public class RobotContainer {
    */
   public Command getAutonomousCommand() {
     // the default auto command is to raise the arm to 80 degree angle
-    return new RaiseArm(m_arm, 80);
+    return new RaiseArm(m_arm, ArmConstants.kArmAgleToSaveEnergy, 0);
   }
 
   public static void testInit() {

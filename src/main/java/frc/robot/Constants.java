@@ -55,6 +55,7 @@ public final class Constants {
   public static final class DriveConstants {
     public static final boolean kFieldRelative = true; 
     public static final boolean kCopterJoystickLayout = false;
+    public static final boolean useTwoJoysticks = true;
 
     /****  Chassis configuration ****/
     public static final double kTrackWidth = Units.inchesToMeters(24.0);
@@ -266,6 +267,9 @@ public final class Constants {
     public static final double kArmAgleToSaveEnergy = 80; // increase after we use both absolute and relative encoders
     public static final double initialMinAngle = 11;
     public static final double initialMaxAngle = 100;
+
+    // hack!
+    public static final double kExtraDelayForOscillationsToStop = 0.5; // seconds (until the PID coefficients below are tuned to avoid oscillations)
 
     // PID coefficients
     public static final double initialP = 1e-4; // 1.3e-4; // critical gain is 1.8e-4, do not go above that

@@ -4,6 +4,7 @@
 
 package frc.robot.commands;
 
+import edu.wpi.first.util.WPIUtilJNI;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Constants.ArmConstants;
@@ -18,34 +19,36 @@ public class RaiseArm extends Command {
   private final Supplier<Double> m_targetAngleSupplier;
 
   private final SmartMotionArm m_arm;
-  private double m_targetAngle;
+  private final double m_extraTimeDelaySeconds;
 
-  public RaiseArm(SmartMotionArm arm, double targetAngle) {
-    this(arm, targetAngle, null, null);
+  private double m_targetAngle = 0;
+  private double m_finishTime = 0;
+
+  public RaiseArm(SmartMotionArm arm, double targetAngle, double extraTimeDelaySeconds) {
+    this(arm, targetAngle, extraTimeDelaySeconds, null, null);
   }
 
   /** Creates a new RaiseArm. */
-  public RaiseArm(SmartMotionArm arm, double targetAngle, Supplier<Double> targetAngleSupplier, String networkTablesAngleName) {
+  public RaiseArm(SmartMotionArm arm, double targetAngle, double extraTimeDelaySeconds, Supplier<Double> targetAngleSupplier, String networkTablesAngleName) {
     m_arm = arm;
     m_targetAngle = targetAngle;
     m_targetAngleSupplier = targetAngleSupplier;
     m_ntTargetAngleName = networkTablesAngleName;
+    m_extraTimeDelaySeconds = extraTimeDelaySeconds;
   
     addRequirements(arm);
 
     // if target angle was specified too low or too high, bring it into limits
-    if (m_targetAngle > ArmConstants.initialMaxAngle)
-      m_targetAngle = ArmConstants.initialMaxAngle;
-    if (m_targetAngle < ArmConstants.initialMinAngle)
-      m_targetAngle = ArmConstants.initialMinAngle;
+    setTargetAngle(targetAngle);
   
     if (m_ntTargetAngleName != null)
-      SmartDashboard.setDefaultNumber(m_ntTargetAngleName, targetAngle);
+      SmartDashboard.setDefaultNumber(m_ntTargetAngleName, m_targetAngle);
   }
 
   // Called when the command is initially scheduled.
   @Override
   public void initialize() {
+    m_finishTime = 0;
     // -- if target angle comes from somewhere, get it from there
     if (m_ntTargetAngleName != null)
       setTargetAngle(SmartDashboard.getNumber(m_ntTargetAngleName, m_targetAngle));
@@ -74,8 +77,11 @@ public class RaiseArm extends Command {
     double distanceToTarget = Math.abs(m_arm.getAngle() - m_targetAngle);
     if (distanceToTarget > kAngleTolerance)
       return false;
-    // otherwise, we arrived
-    return true;
+    // othewise, we are finished so long as we wait for m_extraDelaySeconds
+    double now = WPIUtilJNI.now() * 1e-6;
+    if (m_finishTime == 0)
+      m_finishTime = now + m_extraTimeDelaySeconds;
+    return now >= m_finishTime; // "isFinished" for us means "time now" is later than the planned finish time 
   }
 
   private void setTargetAngle(double targetAngle) {
