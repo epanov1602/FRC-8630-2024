@@ -143,7 +143,7 @@ public class RobotContainer {
     m_driverJoystick.y().onTrue(new RaiseArm(m_arm, ArmConstants.kArmAgleToSaveEnergy));
   
     // operator can: do all else with the arm
-    var joystick = m_driverJoystick;
+    var joystick = m_manipulatorJoystick;
 
     Command approachAndShoot = makeApproachAndShootCommand(31.5, 2850, "armShootAngle"); // can make it "armShootAngle"
     joystick.rightBumper().whileTrue(approachAndShoot);
@@ -168,7 +168,7 @@ public class RobotContainer {
     joystick.povRight().onTrue(ejectNote);
 
     // raw movements of the manipulator, in order to troubleshoot it (only if we have the second joystick)
-    //if (joystick != m_driverJoystick)
+    if (joystick != m_driverJoystick)
     {
       joystick.y().onTrue(m_arm.runOnce(() -> m_arm.setAngleGoal(80)));
       joystick.a().onTrue(m_arm.runOnce(() -> m_arm.setAngleGoal(ArmConstants.initialMinAngle)));
