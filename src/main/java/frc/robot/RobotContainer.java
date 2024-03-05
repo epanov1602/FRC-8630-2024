@@ -31,7 +31,6 @@ import frc.robot.commands.SwerveToPoint;
 import frc.robot.commands.SwerveTrajectoryToPoint;
 import frc.robot.commands.SwitchVisualTarget;
 import frc.robot.commands.GoToPoint;
-import frc.robot.commands.MockPickupCommand;
 import frc.robot.commands.RaiseArm;
 import frc.robot.commands.RequestArmAngle;
 import frc.robot.commands.ResetOdometry;
@@ -54,6 +53,11 @@ import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.SwerveControllerCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
+import frc.utils.CubicSpline;
+
+import static frc.robot.Constants.ArmConstants.initialMinAngle;
+
+import java.lang.reflect.Field;
 import java.util.List;
 
 /*
@@ -91,7 +95,7 @@ public class RobotContainer {
     // the default command for the aiming camera is to change the LEDs depending on whether we are close enough to fire
     // (default command only runs if no other command needs to run)
     m_aimingCamera.setDefaultCommand(m_aimingCamera.run(() -> {
-      if (m_aimingCamera.getY() > 0) // if target Y angle altitude is >0, we are close enough to fire from this distance ~successfully
+      if (m_aimingCamera.getY() > -1.4) // if target Y angle altitude is >0, we are close enough to fire from this distance ~successfully
          m_aimingCamera.setLightOn();
       else
          m_aimingCamera.setLightOff();
@@ -130,19 +134,25 @@ public class RobotContainer {
   }
 
   private void configureButtonBindings() {
-    // let's put all the button bindings here, to keep them in one place
-
-    // POV up: raise, aim and shoot at angle 36, and rpm 5700 (it does not have to be 5700 since the target is nearby, but this is for later)
-    
-    /*
-    // this works for shooting from close distance, but uses 5700 rpm
-    Command raiseAndShoot = makeRaiseAndShootCommand(36, 5700);
-    */
+    // driver can:
+    // - X brake for blocking,
+    // - lower arm to dive under the chain
+    // - raise arm back
+    m_driverJoystick.x().whileTrue(m_drivetrain.run(m_drivetrain::setX));
+    m_driverJoystick.a().onTrue(new RaiseArm(m_arm, ArmConstants.initialMinAngle));
+    m_driverJoystick.y().onTrue(new RaiseArm(m_arm, ArmConstants.kArmAgleToSaveEnergy));
   
-    var joystick = m_manipulatorJoystick;
+    // operator can: do all else with the arm
+    var joystick = m_driverJoystick;
 
-    Command raiseAndShoot = makeRaiseAndShootCommand(30.5, 2850, "armShootAngle"); // can make it "armShootAngle" (another option: 37, 5700)
-    //Command approachAndShoot = makeApproachAndShootCommand(30.5, 2850, "armShootAngle"); // can make it "armShootAngle"
+    Command approachAndShoot = makeApproachAndShootCommand(31.5, 2850, "armShootAngle"); // can make it "armShootAngle"
+    joystick.rightBumper().whileTrue(approachAndShoot);
+
+    Command brakeAndShoot = makeBrakeAndShootCommand();
+    joystick.leftBumper().whileTrue(brakeAndShoot);
+
+    // POV up: just shoot assuming we are up close, don't even look at the camera
+    Command raiseAndShoot = makeRaiseAndShootCommand(31.5, 5700, "armShootAngle"); // can make it "armShootAngle" (another option: 37, 5700)
     joystick.povUp().onTrue(raiseAndShoot);
 
     // POV left: pick up using camera
@@ -157,18 +167,21 @@ public class RobotContainer {
     Command ejectNote = makeConsistentEjectNoteCommand();
     joystick.povRight().onTrue(ejectNote);
 
-    // raw movements of the manipulator, in order to troubleshoot it
-    joystick.y().onTrue(m_arm.runOnce(() -> m_arm.setAngleGoal(80)));
-    joystick.a().onTrue(m_arm.runOnce(() -> m_arm.setAngleGoal(ArmConstants.initialMinAngle)));
-    joystick.x().onTrue(m_shooter.runOnce(() -> m_shooter.setVelocityGoal(2500)));
-    joystick.b().onTrue(m_shooter.runOnce(() -> m_shooter.setVelocityGoal(0)));
+    // raw movements of the manipulator, in order to troubleshoot it (only if we have the second joystick)
+    //if (joystick != m_driverJoystick)
+    {
+      joystick.y().onTrue(m_arm.runOnce(() -> m_arm.setAngleGoal(80)));
+      joystick.a().onTrue(m_arm.runOnce(() -> m_arm.setAngleGoal(ArmConstants.initialMinAngle)));
+      joystick.x().onTrue(m_shooter.runOnce(() -> m_shooter.setVelocityGoal(2850)));
+      joystick.b().onTrue(m_shooter.runOnce(() -> m_shooter.setVelocityGoal(0)));
+    }
   }
 
   private Command makeRaiseAndShootCommand(double aimArmAngle, double shootingFlywheelRpm, String setAngleFromSmartDashboardKey) {
     Command dropArm = new RaiseArm(m_arm, aimArmAngle - 15); // TODO: maybe comment out dropArm, and see if determinism breaks?
-    Command raiseArm = new RaiseArm(m_arm, aimArmAngle, setAngleFromSmartDashboardKey);
-    Command shoot = new Shoot(m_shooter, m_intake, shootingFlywheelRpm);
-    Command raiseAfterwardsToSaveEnergy = new RequestArmAngle(m_arm, 85);
+    Command raiseArm = new RaiseArm(m_arm, aimArmAngle, null, setAngleFromSmartDashboardKey);
+    Command shoot = new Shoot(m_shooter, m_intake, m_arm, shootingFlywheelRpm);
+    Command raiseAfterwardsToSaveEnergy = new RequestArmAngle(m_arm, ArmConstants.kArmAgleToSaveEnergy);
 
     Command result = new SequentialCommandGroup(dropArm, raiseArm, shoot, raiseAfterwardsToSaveEnergy);
 
@@ -182,17 +195,60 @@ public class RobotContainer {
     // 1.5 robot lenghts away: ty=0, tx=-7
     // very far away: ty=-5.5, tx=-3
     double approachSpeed = -0.3, seekingSpeed = 0.1; // set them to zero if you want to just aim
-    var dontDriveJustAim = new FollowVisualTarget.WhenToFinish(0, 12, 0, true);
+    var approachAndAim = new FollowVisualTarget.WhenToFinish(0, 12, 0, true);
+    var aim = new FollowVisualTarget(
+      m_drivetrain, m_aimingCamera, CameraConstants.kSpeakerPipelineIndex,
+      seekingSpeed, approachSpeed,
+      CameraConstants.kAimingCameraImageRotation,
+      approachAndAim);
+
+    var raiseAndShoot = makeRaiseAndShootCommand(aimArmAngle, shootingFlywheelRpm, setAngleFromSmartDashboardKey);
+    var raiseAndShootIfFound = raiseAndShoot.onlyIf(aim::getEndedWithTarget);
+
+    return new SequentialCommandGroup(aim, raiseAndShootIfFound);
+  }
+
+  private Command makeBrakeAndShootCommand() {
+    // -- aiming horizontally
+    double approachSpeed = 0.0; // do not approach, just aim
+    double seekingSpeed = 0.0; // do not seek, just aim
+    var dontDriveJustAim = new FollowVisualTarget.WhenToFinish(0, 0, 0, true);
     var aim = new FollowVisualTarget(
       m_drivetrain, m_aimingCamera, CameraConstants.kSpeakerPipelineIndex,
       seekingSpeed, approachSpeed,
       CameraConstants.kAimingCameraImageRotation,
       dontDriveJustAim);
 
-    var raiseAndShoot = makeRaiseAndShootCommand(aimArmAngle, shootingFlywheelRpm, setAngleFromSmartDashboardKey);
-    var raiseAndShootIfFound = raiseAndShoot.onlyIf(aim::getEndedWithTarget);
+    // -- aiming vertically and shooting, with wheels locked in X position
+    double initialDropAngle = 22;
+    double lowestPossibleFiringAngle = 37;
+    double shootingFlywheelRpm = 5700;
 
-    return new SequentialCommandGroup(aim, raiseAndShootIfFound);
+    Command dropArm = new RaiseArm(m_arm, initialDropAngle); // TODO: maybe comment out dropArm, and see if determinism breaks?
+    Command raiseArm = new RaiseArm(m_arm, lowestPossibleFiringAngle, this::getGoodFiringAngle, null);
+    Command shoot = new Shoot(m_shooter, m_intake, m_arm, shootingFlywheelRpm);
+    Command raiseAfterwardsToSaveEnergy = new RequestArmAngle(m_arm, ArmConstants.kArmAgleToSaveEnergy);
+    Command raiseArmAndShoot = new SequentialCommandGroup(dropArm, raiseArm, shoot, raiseAfterwardsToSaveEnergy);
+
+    Command keepWheelsOnXBrake = m_drivetrain.run(m_drivetrain::setX); // keep wheels on X brake, otherwise opponent robots can easily disrupt aiming
+    Command raiseArmAndShootWithWheelsLocked = raiseArmAndShoot.deadlineWith(keepWheelsOnXBrake);
+
+    Command shootIfAimed = raiseArmAndShootWithWheelsLocked.onlyIf(aim::getEndedWithTarget);
+    return new SequentialCommandGroup(aim, shootIfAimed);
+  }
+
+  // gets a good angle for the shooter arm, given what aiming camera says about angular distance to target
+  private double getGoodFiringAngle() {
+    double targetY = m_aimingCamera.getLastValidY();
+    SmartDashboard.putNumber("brakeAndShootTargetY", targetY);
+    if (targetY == 0)
+      return ArmConstants.initialMaxAngle; // something safe, if we don't see the target anymore
+
+    // targetY angle tells us about how far the target is
+    // use the firing table to find the parfect firing angle for this distance to target
+    double firingAngle = FieldMap.kSpeakerFiringTable.interpolate(targetY);
+    SmartDashboard.putNumber("brakeAndShootFiringAngle", firingAngle);
+    return firingAngle;
   }
 
   private Command makeEjectNoteCommand() {

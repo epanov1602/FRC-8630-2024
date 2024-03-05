@@ -4,38 +4,41 @@
 
 package frc.robot.commands;
 
-import edu.wpi.first.wpilibj.AddressableLED;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Constants.ArmConstants;
 import frc.robot.subsystems.SmartMotionArm;
 
+import java.util.function.Supplier;
+
 public class RaiseArm extends Command {
   private static final double kAngleTolerance = 8; // degrees
 
   private final String m_ntTargetAngleName;
+  private final Supplier<Double> m_targetAngleSupplier;
+
   private final SmartMotionArm m_arm;
   private double m_targetAngle;
 
-
   public RaiseArm(SmartMotionArm arm, double targetAngle) {
-    this(arm, targetAngle, null);
+    this(arm, targetAngle, null, null);
   }
 
   /** Creates a new RaiseArm. */
-  public RaiseArm(SmartMotionArm arm, double targetAngle, String networkTablesAngleName) {
+  public RaiseArm(SmartMotionArm arm, double targetAngle, Supplier<Double> targetAngleSupplier, String networkTablesAngleName) {
     m_arm = arm;
     m_targetAngle = targetAngle;
+    m_targetAngleSupplier = targetAngleSupplier;
     m_ntTargetAngleName = networkTablesAngleName;
   
+    addRequirements(arm);
+
     // if target angle was specified too low or too high, bring it into limits
     if (m_targetAngle > ArmConstants.initialMaxAngle)
       m_targetAngle = ArmConstants.initialMaxAngle;
     if (m_targetAngle < ArmConstants.initialMinAngle)
       m_targetAngle = ArmConstants.initialMinAngle;
   
-    addRequirements(arm);
-
     if (m_ntTargetAngleName != null)
       SmartDashboard.setDefaultNumber(m_ntTargetAngleName, targetAngle);
   }
@@ -43,13 +46,12 @@ public class RaiseArm extends Command {
   // Called when the command is initially scheduled.
   @Override
   public void initialize() {
-    if (m_ntTargetAngleName != null) {
-      m_targetAngle = SmartDashboard.getNumber(m_ntTargetAngleName, m_targetAngle);
-      if (m_targetAngle > ArmConstants.initialMaxAngle)
-        m_targetAngle = ArmConstants.initialMaxAngle;
-      if (m_targetAngle < ArmConstants.initialMinAngle)
-        m_targetAngle = ArmConstants.initialMinAngle;
-    }
+    // -- if target angle comes from somewhere, get it from there
+    if (m_ntTargetAngleName != null)
+      setTargetAngle(SmartDashboard.getNumber(m_ntTargetAngleName, m_targetAngle));
+    else if (m_targetAngleSupplier != null)
+      setTargetAngle(m_targetAngleSupplier.get());
+    // -- then, set it on the arm
     m_arm.setAngleGoal(m_targetAngle);
   }
 
@@ -74,5 +76,13 @@ public class RaiseArm extends Command {
       return false;
     // otherwise, we arrived
     return true;
+  }
+
+  private void setTargetAngle(double targetAngle) {
+    if (targetAngle > ArmConstants.initialMaxAngle)
+      targetAngle = ArmConstants.initialMaxAngle;
+    if (targetAngle < ArmConstants.initialMinAngle)
+      targetAngle = ArmConstants.initialMinAngle;
+    m_targetAngle = targetAngle;
   }
 }

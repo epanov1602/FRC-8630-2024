@@ -53,8 +53,8 @@ public final class Constants {
   }
 
   public static final class DriveConstants {
-    public static final boolean kFieldRelative = true;
-    public static final boolean kCopterJoystickLayout = false;
+    public static final boolean kFieldRelative = true; 
+    public static final boolean kCopterJoystickLayout = true;
 
     /****  Chassis configuration ****/
     public static final double kTrackWidth = Units.inchesToMeters(24.0);
@@ -164,7 +164,7 @@ public final class Constants {
     // turning
     public static final double kPRotation = 0.07 / DriveConstants.kMaxAngularSpeed; // proportional gain for rotation: if set too high, robot will overshoot
     public static final double kMaxTurningSpeed = 0.99;
-    public static final double kMaxTurningSpeedForVisualTargets = 0.10; // only applies when target seeking is disabled
+    public static final double kMaxTurningSpeedForVisualTargets = 0.20; // only applies when target seeking is disabled
     public static final double kMinTurningSpeed = 0.03; // any value lower than this causes motors to not spin at all
     public static final double kDirectionToleranceDegrees = 1.5; // plus minus 1.5 degrees of direction tolerance is ok
     public static final double kTurningSpeedToleranceDegreesPerSecond = 7; // if the chassis is moving slower than this and facing the right way, we can stop aiming
@@ -188,13 +188,13 @@ public final class Constants {
   }
 
   public static final class CameraConstants {
-    public static final Rotation2d kPickupCameraImageRotation = Rotation2d.fromDegrees(-10); // should be -30 for camera mounted above the left swerve module 
+    public static final Rotation2d kPickupCameraImageRotation = Rotation2d.fromDegrees(-19); // if the note ends up to the left of the robot centerline, make this more negative
     public static final String kPickupCameraName = "limelight-pickup";
 
     public static final Rotation2d kAimingCameraImageRotation = Rotation2d.fromDegrees(0); // should be -30 for camera mounted above the left swerve module 
     public static final String kAimingCameraName = "limelight-aiming";
 
-    public static final int kNotePipelineIndex = 9;
+    public static final int kNotePipelineIndex = 0;
     public static final double kNoteApproachSpeed = 0.6;
     public static final double kNoteApproachRotationSpeed = 0.1;
 
@@ -241,11 +241,11 @@ public final class Constants {
    */
   public static final class ShooterConstants {
     // PID coefficients
-    public static final double initialP = 7e-4;
+    public static final double initialP = 5e-4;
     public static final double initialI = 0;
     public static final double initialD = 0;
     public static final double initialIz = 0;
-    public static final double initialFF = 0;
+    public static final double initialFF = 0.00014;
     public static final double initialMaxOutput = 1;
     public static final double initialMinOutput = -1;
     public static final double initialMaxRPM = 5700;
@@ -263,6 +263,7 @@ public final class Constants {
   public static final class ArmConstants {
     public static final double kArmAngleToEjectIntoAmp = 95; // start ejecting note into amp from this angle
     public static final double kArmAngleToPushIntoAmp = 80; // after ejecting note into, drop the arm to this angle to push the note in
+    public static final double kArmAgleToSaveEnergy = 80; // increase after we use both absolute and relative encoders
     public static final double initialMinAngle = 11;
     public static final double initialMaxAngle = 100;
 

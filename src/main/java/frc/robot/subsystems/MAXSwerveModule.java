@@ -144,8 +144,11 @@ public class MAXSwerveModule {
     if (Math.abs(desiredState.speedMetersPerSecond) < ModuleConstants.kDrivingMinSpeedMetersPerSecond) {
       // if WPILib doesn't want us to move at all, don't bother to bring the wheels back to zero angle yet
       // (causes cycling in-and-out of brownout protection when battery is lower: https://youtu.be/0Xi9yb1IMyA)
-      stop();
-      return;
+      boolean isXBrake = Math.abs(Math.abs(desiredState.angle.getDegrees()) - 45) < 0.01;
+      if (!isXBrake) {
+        stop();
+        return;
+      }
     }
 
     // Apply chassis angular offset to the desired state.

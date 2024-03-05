@@ -4,8 +4,6 @@
 
 package frc.robot.commands;
 
-import org.ejml.dense.block.MatrixOps_DDRB;
-
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -171,6 +169,8 @@ public class FollowVisualTarget extends Command {
         System.out.println("stopping because we see the target and there are no further moves to make");
         m_timeToStop = true;
       }
+      if (m_timeToStop)
+        m_endedWithTarget = true;
 
       // restrictions on forward speed
       double noOvershootSpeed = Math.sqrt(percentDistanceToTarget);

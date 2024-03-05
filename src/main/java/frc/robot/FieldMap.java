@@ -9,6 +9,7 @@ import java.util.Collections;
 import java.util.List;
 
 import edu.wpi.first.math.geometry.Translation2d;
+import frc.utils.CubicSpline;
 
 /** Add your docs here. */
 public final class FieldMap {
@@ -72,12 +73,17 @@ public final class FieldMap {
   }
 
 
-  /* firing table:
+  /* firing table (angle to tag -> angle to raise the arm):
    * aimAngleToFiringAngle:
-   *   12.5: 37
-   *   4.98: 45
-   *   5.45: 44.5
-   *   0: 52
+   *   -1.5: 53
+   *   0.29: 50.5
+   *   2.77: 47
+   *   6.16: 41.5
+   *   9.37: 37
+   *   12.5: 32
    */
 
+   public static final CubicSpline kSpeakerFiringTable = new CubicSpline(
+     new double[] { -1.52, 0.29, 2.77, 6.16, 9.37, 12.5 }, new double[] { 53, 50.5, 47, 41.5, 37, 32 }
+   );
 }

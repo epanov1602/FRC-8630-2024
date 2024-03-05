@@ -18,13 +18,20 @@ public class LimelightCamera extends SubsystemBase {
   protected NetworkTable m_table;
   private NetworkTableEntry m_tx, m_ty, m_ta, m_pipeline, m_ledMode, m_camMode, m_percentTimeSeen;
   private boolean m_driverCameraMode = true;
-  private double m_exposureWindowSeconds = 0.4;
+  private double m_exposureWindowSeconds = 0.5;
   private double m_percentageOfTimeSeen = 0;
   private double m_lastTimeLooked = 0;
+  private double m_lastValidX = 0;
+  private double m_lastValidY = 0;
+  private double m_lastValidA = 0;
 
   public double getA() { return m_ta.getDouble(0.0); }
   public double getX() { return m_tx.getDouble(0.0); }
   public double getY() { return m_ty.getDouble(0.0); }
+
+  public double getLastValidA() { return m_lastValidA; }
+  public double getLastValidX() { return m_lastValidX; }
+  public double getLastValidY() { return m_lastValidY; }
 
   public double getX(Rotation2d turn) {
     var point = new Translation2d(getX(), getY()).rotateBy(turn);
@@ -37,7 +44,7 @@ public class LimelightCamera extends SubsystemBase {
   }
 
   public double getPercentageOfTimeTargetDetected() { return m_percentageOfTimeSeen; }
-  public boolean isTargetRecentlySeen() { return m_percentageOfTimeSeen > 0.25; }
+  public boolean isTargetRecentlySeen() { return m_percentageOfTimeSeen > 0.125; }
 
   public int getPipeline() { return (int)m_pipeline.getDouble(-1); }
   public void setPipeline(int pipeline) { m_pipeline.setDouble(pipeline); m_percentageOfTimeSeen = 0; }
@@ -83,6 +90,9 @@ public class LimelightCamera extends SubsystemBase {
     // 2. update the percentage of time the target is seen
     double targetX = getX();
     if (targetX != 0) {
+      m_lastValidX = targetX;
+      m_lastValidY = getY();
+      m_lastValidA = getA();
       // we see the target: the percentage of time goes up, if it was lower than 100%
       m_percentageOfTimeSeen = m_percentageOfTimeSeen + timeSinceLastLooked / m_exposureWindowSeconds;
       if (m_percentageOfTimeSeen > 1)
