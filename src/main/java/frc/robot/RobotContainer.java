@@ -24,7 +24,6 @@ import frc.robot.Constants.OIConstants;
 
 import frc.robot.Constants.OdometryConstants;
 import frc.robot.commands.AimToDirection;
-import frc.robot.commands.DropArmForPickup;
 import frc.robot.commands.EjectFromShooter;
 import frc.robot.commands.FollowVisualTarget;
 import frc.robot.commands.SwerveToPoint;
@@ -89,7 +88,7 @@ public class RobotContainer {
     Command setDefaultCameraPipelines = m_pickupCamera.runOnce(this::setDefaultCameraPipelines);
 
     // Configure default teleop commands
-    if (Constants.DriveConstants.kCopterJoystickLayout)
+    if (Constants.OIConstants.kCopterJoystickLayout)
       m_drivetrain.setDefaultCommand(setDefaultCameraPipelines.andThen(new RunCommand(this::copterJoystickDrive, m_drivetrain)));
     else
       m_drivetrain.setDefaultCommand(setDefaultCameraPipelines.andThen(new RunCommand(this::tankJoystickDrive, m_drivetrain)));
@@ -117,14 +116,14 @@ public class RobotContainer {
         -MathUtil.applyDeadband(m_driverJoystick.getLeftY(), OIConstants.kDriveDeadband),
         -MathUtil.applyDeadband(m_driverJoystick.getLeftX(), OIConstants.kDriveDeadband),
         -MathUtil.applyDeadband(m_driverJoystick.getRightX(), OIConstants.kDriveDeadband),
-        Constants.DriveConstants.kFieldRelative,
+        Constants.OIConstants.kFieldRelative,
         true);
   }
 
   private void copterJoystickDrive() {
     // if keeping high pressure on the throttle stick, not field-relative anymore (for manual aiming)
     double slowDownFactor = 1.0;
-    boolean fieldRelative = Constants.DriveConstants.kFieldRelative;
+    boolean fieldRelative = Constants.OIConstants.kFieldRelative;
     if (Math.abs(m_driverJoystick.getLeftY()) > 0.5) {
       fieldRelative = false;
       slowDownFactor = 0.75;
@@ -150,7 +149,7 @@ public class RobotContainer {
   
     // operator can: do all else with the arm
     var joystick = m_manipulatorJoystick;
-    if (!DriveConstants.useTwoJoysticks)
+    if (!Constants.OIConstants.useTwoJoysticks)
       joystick = m_driverJoystick; // if not using two joysticks, use driver joystick for both driving and arm
 
     Command approachAndShoot = makeApproachAndShootCommand(31.5, 2850, "armShootAngle"); // can make it "armShootAngle"
@@ -309,7 +308,7 @@ public class RobotContainer {
     var whenToStop = new FollowVisualTarget.WhenToFinish(-16, 0, 0, false);
 
     var approachAndAim = new FollowVisualTarget(
-      m_drivetrain, m_pickupCamera, CameraConstants.kNotePipelineIndex, 0.05, 0.5,
+      m_drivetrain, m_pickupCamera, CameraConstants.kNotePipelineIndex, CameraConstants.kNoteApproachRotationSpeed, CameraConstants.kNoteApproachSpeed,
       CameraConstants.kPickupCameraImageRotation, whenToStop);
     
     var thenPickup = makePickupNoteCommand(true, armAngleAfterPickup);

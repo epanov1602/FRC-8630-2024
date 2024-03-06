@@ -14,13 +14,20 @@ import frc.utils.CubicSpline;
 /** Add your docs here. */
 public final class FieldMap {
 
+  // -- blue starting points
+  public static final Translation2d kBlueApproachSpeakerFromRight = new Translation2d(1.90, 4.35);
+  public static final Translation2d kBlueApproachSpeakerFromCenter = new Translation2d(1.90, 5.55);
+  public static final Translation2d kBlueApproachSpeakerFromLeft = new Translation2d(1.90, 6.75);
+  public static final Translation2d kBlueSpeaker = new Translation2d(0.2, 5.55);
 
-  // -- blue
-  public static final Translation2d kBlueApproachSpeakerFromRight = new Translation2d(1.90, 4.40);
-  public static final Translation2d kBlueApproachSpeakerFromCenter = new Translation2d(1.90, 4.10);
-  public static final Translation2d kBlueApproachSpeakerFromLeft = new Translation2d(1.90, 6.70);
+  // -- red starting points
+  public static final Translation2d kRedApproachSpeakerFromLeft = new Translation2d(14.65, 4.35);
+  public static final Translation2d kRedApproachSpeakerFromCenter = new Translation2d(14.65, 5.55);
+  public static final Translation2d kReadApproachSpeakerFromRight = new Translation2d(14.65, 6.75);
+  public static final Translation2d kRedSpeaker = new Translation2d(16.3, 5.55);
 
-  public static final List<Translation2d> kBlueApproachCenerlineFromRight = rescale(0.33, List.of(
+  // -- blue centerline approaches
+  public static final List<Translation2d> kBlueApproachCenerlineFromRight = rescale(1.0, List.of(
     new Translation2d(1.90, 4.10),
     new Translation2d(2.57, 2.73),
     new Translation2d(3.71, 1.47),
@@ -33,7 +40,7 @@ public final class FieldMap {
 
   public static final List<Translation2d> kBlueRetreatFromCenerlineAlongRightWall = reverse(kBlueApproachCenerlineFromRight);
 
-  public static final List<Translation2d> kBlueApproachCenerlineFromLeft = rescale(0.33, List.of(
+  public static final List<Translation2d> kBlueApproachCenerlineFromLeft = rescale(1.0, List.of(
     new Translation2d(1.90, 6.10),
     new Translation2d(3.83, 7.00),
     new Translation2d(5.39, 7.39),
@@ -45,7 +52,7 @@ public final class FieldMap {
 
   public static final List<Translation2d> kBlueRetreatFromCenerlineAlongLeftWall = reverse(kBlueApproachCenerlineFromLeft);
 
-  public static final List<Translation2d> kBlueApproachFeederWhileHuggingWall = rescale(0.33, List.of(
+  public static final List<Translation2d> kBlueApproachFeederWhileHuggingWall = rescale(1.0, List.of(
     new Translation2d(8.96, 0.80),
     new Translation2d(10.07, 0.80),
     new Translation2d(10.88, 0.80),
@@ -54,7 +61,41 @@ public final class FieldMap {
   ));
 
 
-  // -- red
+  // -- red centerline approaches
+  public static final List<Translation2d> kRedApproachCenerlineFromLeft = rescale(1.0, List.of(
+    new Translation2d(16.50 - 1.90, 4.10),
+    new Translation2d(16.50 - 2.57, 2.73),
+    new Translation2d(16.50 - 3.71, 1.47),
+    new Translation2d(16.50 - 5.16, 0.71),
+    new Translation2d(16.50 - 6.52, 0.65),
+    new Translation2d(16.50 - 7.25, 1.26),
+    new Translation2d(16.50 - 7.25, 5.07),
+    new Translation2d(16.50 - 7.25, 7.51)
+  ));
+
+  public static final List<Translation2d> kRedRetreatFromCenerlineAlongLeftWall = reverse(kBlueApproachCenerlineFromRight);
+
+  public static final List<Translation2d> kRedApproachCenerlineFromRight = rescale(1.0, List.of(
+    new Translation2d(16.50 - 1.90, 6.10),
+    new Translation2d(16.50 - 3.83, 7.00),
+    new Translation2d(16.50 - 5.39, 7.39),
+    new Translation2d(16.50 - 6.32, 7.51),
+    new Translation2d(16.50 - 7.27, 5.37),
+    new Translation2d(16.50 - 7.12, 2.97),
+    new Translation2d(16.50 - 7.10, 0.82)
+  ));
+
+  public static final List<Translation2d> kRedRetreatFromCenerlineAlongRightWall = reverse(kRedApproachCenerlineFromLeft);
+
+  public static final List<Translation2d> kRedApproachFeederWhileHuggingWall = rescale(1.0, List.of(
+    new Translation2d(16.50 - 8.96, 0.80),
+    new Translation2d(16.50 - 10.07, 0.80),
+    new Translation2d(16.50 - 10.88, 0.80),
+    new Translation2d(16.50 - 10.35, 0.92),
+    new Translation2d(16.50 - 15.18, 1.57)
+  ));
+
+
 
 
 
@@ -84,6 +125,7 @@ public final class FieldMap {
    */
 
    public static final CubicSpline kSpeakerFiringTable = new CubicSpline(
-     new double[] { -1.52, 0.29, 2.77, 6.16, 9.37, 12.5 }, new double[] { 53, 50.5, 47, 41.5, 37, 32 }
+     new double[] { -1.52, 0.29, 2.77, 6.16, 9.37, 12.5 },
+     new double[] {    53, 50.5,   47, 41.5,   37,   32 }
    );
 }

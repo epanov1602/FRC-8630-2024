@@ -53,10 +53,6 @@ public final class Constants {
   }
 
   public static final class DriveConstants {
-    public static final boolean kFieldRelative = true; 
-    public static final boolean kCopterJoystickLayout = false;
-    public static final boolean useTwoJoysticks = true;
-
     /****  Chassis configuration ****/
     public static final double kTrackWidth = Units.inchesToMeters(24.0);
     public static final double kWheelBase = Units.inchesToMeters(27.25);
@@ -149,6 +145,9 @@ public final class Constants {
   }
 
   public static final class OIConstants {
+    public static final boolean kFieldRelative = true; 
+    public static final boolean kCopterJoystickLayout = false;
+    public static final boolean useTwoJoysticks = true;
 
     /**
      * Use XBox controller or MS Flight Control Joystick for testing and
