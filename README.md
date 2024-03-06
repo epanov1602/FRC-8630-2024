@@ -15,7 +15,7 @@ First, go to `RobotContainer.java` and somewhere add a function that creates an 
     double ejectIntakeSpeed = 0.17; // is 0.17 a good speed to eject the note?
 
     // if we eject the note into the amp, we need to eject at high angle and then push that note with the arm (at lower angle)
-    Command raiseArm = new RaiseArm(m_arm, ArmConstants.kArmAngleToEjectIntoAmp); 
+    Command raiseArm = new RaiseArm(m_arm, ArmConstants.kArmAngleToEjectIntoAmp, 0); // zero delay after arm is raised, a couple of degrees oscillation is fine 
     Command ejectAndPush = new EjectNote(m_intake, m_arm, ejectIntakeSpeed, ArmConstants.kArmAngleToPushIntoAmp);
 
     Command result = new SequentialCommandGroup(raiseArm, ejectAndPush);
@@ -99,7 +99,7 @@ Bonus: make the robot drive towards that note when the button is pressed.
 We already did most of the work above, now we can use the pick-up functionality but we need to add visual aiming ahead of pickup.
 ```
   private Command makeApproachAndPickupNoteCommand(double armAngleAfterPickup) {
-    // raise arm to get it out of the way of blocking the camera
+    // raise arm to 80 degrees, to get it out of the way of blocking the camera
     var raiseArm = new RaiseArm(m_arm, 80, 0);
 
     // stop approaching the note visually when it's at -16 degrees below horizon, at our feet
@@ -127,13 +127,14 @@ All that's left to do is go inside of `configureButtonBindings()` function and b
 
 Now, try it: robot tries to wiggle right and left in order to pick up the gamepiece even if it wasn't perfectly in the center, but the duration and speed of those wiggles is not right. Can you find those things in the code and calibrate them?
 
-## 4. POV-up button to raise the arm, and fire the gamepiece
+## 4. POV-up button to raise the arm, and fire the gamepiece at a pre-set angle (calibrated to firing from close)
 
 First, go to `RobotContainer.java` and somewhere add a function that creates a raise-arm-and-shoot command
 (note how it has to do two things one after another: raise, and *only* when the angle is good ... then shoot, which is different from what `RequestArmAngle` does by just requesting an angle but not waiting for it)
 ```
   private Command makeRaiseAndShootCommand(double aimArmAngle, double shootingFlywheelRpm) {
-    Command raiseArm = new RaiseArm(m_arm, aimArmAngle);
+    Command raiseArm = new RaiseArm(m_arm, aimArmAngle, 0.5);
+    // 0.5 = extra 0.5s delay for oscillations to stop so we have precise angle (oscillations happen because we did not calibrate the PID gains on the arm yet)
 
     Command shoot = new Shoot(m_shooter, m_intake, shootingFlywheelRpm);
 
@@ -153,4 +154,99 @@ So, inside of `configureButtonBindings()` function, please add something like th
     Command raiseAndShoot = makeAimAndShootCommand(37, 5700);
     m_driverJoystick.povUp().onTrue(raiseAndShoot);
 ```
+
+## 5. Right bumper button: use camera to drive up to the speaker, and then raise-and-shoot into it
+Here we can reuse the raise-and-shoot command we already created. We just need to add the logic to visually find the speaker and drive up to it.
+
+```
+  private Command makeApproachAndShootCommand(double aimArmAngle, double shootingFlywheelRpm, String setAngleFromSmartDashboardKey) {
+    // 1. use camera to approach the speaker
+    double approachSpeed = -0.3, seekingSpeed = 0.1; // set them to zero if you want to just aim
+    var approachAndAim = new FollowVisualTarget.WhenToFinish(0, 12, 0, true);
+    var aim = new FollowVisualTarget(
+      m_drivetrain, m_aimingCamera, CameraConstants.kSpeakerPipelineIndex,
+      seekingSpeed, approachSpeed,
+      CameraConstants.kAimingCameraImageRotation,
+      approachAndAim);
+
+    // 2. and then use the command that we created in part 4 above
+    var raiseAndShoot = makeRaiseAndShootCommand(aimArmAngle, shootingFlywheelRpm, setAngleFromSmartDashboardKey);
+    var raiseAndShootIfFound = raiseAndShoot.onlyIf(aim::getEndedWithTarget);
+
+    // 1 + 2
+    return new SequentialCommandGroup(aim, raiseAndShootIfFound);
+  }
+```
+
+This can be bound to right bumper button, inside of `configureButtonBindings()` function:
+```
+    Command approachAndShoot = makeApproachAndShootCommand(31.5, 2850, "armShootAngle"); // can make it "armShootAngle"
+    joystick.rightBumper().whileTrue(approachAndShoot);
+```
+
+## 6. Left bumper button: lock the wheels in X position, measure how far the speaker is, and pick the shooting arm angle for that shot
+
+A bit more complicated: first we need to aim horizontally, then pick the arm angle, and only then shoot:
+```
+  private Command makeBrakeAndShootCommand() {
+    // -- first use camera to rotate and make sure we are aimed directly at the speaker (but not approach it: approachSpeed=0)
+    double approachSpeed = 0.0; // do not approach, just aim
+    double seekingSpeed = 0.0; // do not seek, just aim
+    var dontDriveJustAim = new FollowVisualTarget.WhenToFinish(0, 0, 0, true);
+    var aim = new FollowVisualTarget(
+      m_drivetrain, m_aimingCamera, CameraConstants.kSpeakerPipelineIndex,
+      seekingSpeed, approachSpeed,
+      CameraConstants.kAimingCameraImageRotation,
+      dontDriveJustAim);
+
+
+    // -- aiming vertically and shooting, with wheels locked in X position
+    double initialDropAngle = 22;
+    double lowestPossibleFiringAngle = 37;
+    double shootingFlywheelRpm = 5700;
+
+    Command dropArm = new RaiseArm(m_arm, initialDropAngle, 0); // TODO: maybe comment out dropArm, and see if determinism breaks?
+    Command raiseArm = new RaiseArm(m_arm, lowestPossibleFiringAngle, ArmConstants.kExtraDelayForOscillationsToStop, this::getGoodFiringAngle, null);
+    Command shoot = new Shoot(m_shooter, m_intake, m_arm, shootingFlywheelRpm);
+    Command raiseAfterwardsToSaveEnergy = new RequestArmAngle(m_arm, ArmConstants.kArmAgleToSaveEnergy);
+    Command raiseArmAndShoot = new SequentialCommandGroup(dropArm, raiseArm, shoot, raiseAfterwardsToSaveEnergy);
+
+    Command keepWheelsOnXBrake = m_drivetrain.run(m_drivetrain::setX); // keep wheels on X brake, otherwise opponent robots can easily disrupt aiming
+    Command raiseArmAndShootWithWheelsLocked = raiseArmAndShoot.deadlineWith(keepWheelsOnXBrake);
+
+
+    Command shootIfAimed = raiseArmAndShootWithWheelsLocked.onlyIf(aim::getEndedWithTarget);
+    return new SequentialCommandGroup(aim, shootIfAimed);
+  }
+```
+
+, and it can be bound to the left bumper button:
+```
+    Command brakeAndShoot = makeBrakeAndShootCommand();
+    joystick.leftBumper().whileTrue(brakeAndShoot);
+```
+
+## Autonomous 1: fire the preloaded gamepiece and then escape
+We can use the commands created above like legos: connect a command to shoot the note + command to escape using a trajectory
+```
+  /* A command to fire the note immediately and then follow an escape trajectory */
+  private Command makeShootAndLeaveCommand(List<Translation2d> leaveTrajectory, double finishHeadingDegrees) {
+    Command shoot = makeRaiseAndShootCommand(31.5, 2850, null); // angle: 31.5 degrees, speed: 2850 rpm
+    Command leave = new SwerveTrajectoryToPoint(m_drivetrain, leaveTrajectory, Rotation2d.fromDegrees(finishHeadingDegrees));
+
+    // connect the two commands
+    Command result = new SequentialCommandGroup(shoot, leave);
+    return result;
+  }
+```
 .
+
+Now, in `RobotContainer.java` we can find the function that creates the autonomous command, and rewrite it to use the function above.
+```
+  public Command getAutonomousCommand() {
+    // after shooting, use the blue centerline approach from the right
+    var escapeTrajectory = FieldMap.kBlueApproachCenerlineFromLeft;
+    double faceNorthWestToPrepareToPickup = 45; // degrees
+    return makeShootAndLeaveCommand(escapeTrajectory, faceNorthWestToPrepareToPickup);
+  }
+```

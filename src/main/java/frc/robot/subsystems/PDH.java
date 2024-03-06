@@ -19,7 +19,15 @@ public class PDH extends SubsystemBase {
 
   public void setSwitchableChannel(boolean enabled){ 
     m_pdh.setSwitchableChannel(enabled);
-    System.out.println(enabled);
+    System.out.println("switchable channel:" + enabled);
+  }
+
+  public void setSwitchableChannelOn(){ 
+    setSwitchableChannel(true);
+  }
+
+  public void setSwitchableChannelOff() {
+    setSwitchableChannel(false);
   }
 
   @Override

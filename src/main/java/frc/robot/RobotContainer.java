@@ -164,7 +164,7 @@ public class RobotContainer {
     joystick.leftBumper().whileTrue(brakeAndShoot);
 
     // POV up: just shoot assuming we are up close, don't even look at the camera
-    Command raiseAndShoot = makeRaiseAndShootCommand(31.5, 5700, "armShootAngle"); // can make it "armShootAngle" (another option: 37, 5700)
+    Command raiseAndShoot = makeRaiseAndShootCommand(31.5, 2850, "armShootAngle"); // can make it "armShootAngle" (another option: 37, 5700)
     joystick.povUp().onTrue(raiseAndShoot);
     // POV left: pick up using camera
     Command approachAndPickup = makeApproachNoteCommand(80); // raise arm to 80 degrees after pickup, to save energy
@@ -202,9 +202,6 @@ public class RobotContainer {
   }
 
   private Command makeApproachAndShootCommand(double aimArmAngle, double shootingFlywheelRpm, String setAngleFromSmartDashboardKey) {
-    // very close to target: ty=+12, tx=-12
-    // 1.5 robot lenghts away: ty=0, tx=-7
-    // very far away: ty=-5.5, tx=-3
     double approachSpeed = -0.3, seekingSpeed = 0.1; // set them to zero if you want to just aim
     var approachAndAim = new FollowVisualTarget.WhenToFinish(0, 12, 0, true);
     var aim = new FollowVisualTarget(
@@ -220,7 +217,7 @@ public class RobotContainer {
   }
 
   private Command makeBrakeAndShootCommand() {
-    // -- aiming horizontally
+    // -- first use camera to rotate and make sure we are aimed directly at the speaker (but not approach it: approachSpeed=0)
     double approachSpeed = 0.0; // do not approach, just aim
     double seekingSpeed = 0.0; // do not seek, just aim
     var dontDriveJustAim = new FollowVisualTarget.WhenToFinish(0, 0, 0, true);
@@ -326,14 +323,26 @@ public class RobotContainer {
     return totalInput > 0.1;
   }
 
+  /* A command to fire the note immediately and then follow an escape trajectory */
+  private Command makeShootAndLeaveCommand(List<Translation2d> leaveTrajectory, double finishHeadingDegrees) {
+    Command shoot = makeRaiseAndShootCommand(31.5, 2850, null); // angle: 31.5 degrees, speed: 2850 rpm
+    Command leave = new SwerveTrajectoryToPoint(m_drivetrain, leaveTrajectory, Rotation2d.fromDegrees(finishHeadingDegrees));
+
+    // connect the two commands
+    Command result = new SequentialCommandGroup(shoot, leave);
+    return result;
+  }
+
   /**
    * Use this to pass the autonomous command to the main {@link Robot} class.
    *
    * @return the command to run in autonomous
    */
   public Command getAutonomousCommand() {
-    // the default auto command is to raise the arm to 80 degree angle
-    return new RaiseArm(m_arm, ArmConstants.kArmAgleToSaveEnergy, 0);
+    // after shooting, use the blue centerline approach from the right
+    var escapeTrajectory = FieldMap.kBlueApproachCenerlineFromLeft;
+    double faceNorthWestToPrepareToPickup = 45; // degrees
+    return makeShootAndLeaveCommand(escapeTrajectory, faceNorthWestToPrepareToPickup);
   }
 
   public static void testInit() {
