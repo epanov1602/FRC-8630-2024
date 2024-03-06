@@ -6,6 +6,7 @@ package frc.robot.commands;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Constants.ArmConstants;
+import frc.robot.Constants.DriveConstants;
 import frc.robot.subsystems.DriveSubsystem;
 import frc.robot.subsystems.Intake;
 import frc.robot.subsystems.SmartMotionArm;
@@ -50,8 +51,8 @@ public class IntakeNote extends Command {
     final double kArmAngleToleranceToPickUp = 10;
 
     // these three constants were calibrated by Brian, hope they work for everyone
-    final double kPickupForwardDriveSpeed = 0.75; // any reason to not use max speed here?
-    final double kPickupWiggleRotationSpeed = 0.28;
+    final double kPickupForwardDriveSpeed = 2.0 / DriveConstants.kMaxSpeedMetersPerSecond; // any reason to not use max speed here?
+    final double kPickupWiggleRotationSpeed = 1.75 / DriveConstants.kMaxAngularSpeed;
     final double kPickupWiggleIntervalSeconds = 0.5;
 
     if (m_drivetrain != null) {

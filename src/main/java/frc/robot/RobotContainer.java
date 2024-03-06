@@ -227,6 +227,7 @@ public class RobotContainer {
       CameraConstants.kAimingCameraImageRotation,
       dontDriveJustAim);
 
+
     // -- aiming vertically and shooting, with wheels locked in X position
     double initialDropAngle = 22;
     double lowestPossibleFiringAngle = 37;
@@ -240,6 +241,7 @@ public class RobotContainer {
 
     Command keepWheelsOnXBrake = m_drivetrain.run(m_drivetrain::setX); // keep wheels on X brake, otherwise opponent robots can easily disrupt aiming
     Command raiseArmAndShootWithWheelsLocked = raiseArmAndShoot.deadlineWith(keepWheelsOnXBrake);
+
 
     Command shootIfAimed = raiseArmAndShootWithWheelsLocked.onlyIf(aim::getEndedWithTarget);
     return new SequentialCommandGroup(aim, shootIfAimed);

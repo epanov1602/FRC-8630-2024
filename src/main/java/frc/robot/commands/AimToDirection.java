@@ -4,24 +4,41 @@
 
 package frc.robot.commands;
 
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Constants;
 import frc.robot.subsystems.DriveSubsystem;
 
 public class AimToDirection extends Command {
   private DriveSubsystem m_drivetrain;
+  private Translation2d m_targetDirectionPoint;
   private double m_targetDirectionDegrees;
 
   public AimToDirection(DriveSubsystem drivetrain, double targetDirectionDegrees) {
     m_drivetrain = drivetrain;
     m_targetDirectionDegrees = targetDirectionDegrees;
+    m_targetDirectionPoint = null;
+    addRequirements(drivetrain);
+  }
+
+  public AimToDirection(DriveSubsystem drivetrain, Translation2d targetFieldPoint) {
+    m_drivetrain = drivetrain;
+    m_targetDirectionPoint = targetFieldPoint;
+    m_targetDirectionDegrees = 0;
     addRequirements(drivetrain);
   }
 
   // Called when the command is initially scheduled.
   @Override
-  public void initialize() {}
+  public void initialize() {
+    if (m_targetDirectionPoint != null) {
+      Translation2d fromHereToTargret = m_targetDirectionPoint.minus(m_drivetrain.getPose().getTranslation());
+      m_targetDirectionDegrees = fromHereToTargret.getAngle().getDegrees();
+    }
+    SmartDashboard.putNumber("aimToDirectionDegrees", m_targetDirectionDegrees);
+  }
 
   // Called every time the scheduler runs while the command is scheduled.
   @Override
