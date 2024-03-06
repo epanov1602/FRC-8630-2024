@@ -81,7 +81,7 @@ public final class Constants {
         new Translation2d(-kWheelBase / 2, kTrackWidth / 2),
         new Translation2d(-kWheelBase / 2, -kTrackWidth / 2));
 
-    // Angular offsets of the modules relative to the chassis in radians
+    // Angular offsets of the modules relative to the chassis in radiansf
     public static final double kFrontLeftChassisAngularOffset = -Math.PI / 2;
     public static final double kFrontRightChassisAngularOffset = 0;
     public static final double kBackLeftChassisAngularOffset = Math.PI;
@@ -188,6 +188,8 @@ public final class Constants {
       new TrapezoidProfile.Constraints(
             DriveConstants.kPhysicalMaxAngularSpeedRadiansPerSecond / 10,
             DriveConstants.kMaxAngularAccelerationRadiansPerSecondSquared / 4);
+
+    public static final double kShootFromCloseArmAngle = 31.5;
   }
 
   public static final class CameraConstants {

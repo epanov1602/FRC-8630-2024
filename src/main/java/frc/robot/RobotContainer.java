@@ -324,16 +324,74 @@ public class RobotContainer {
   }
 
   /* A command to fire the note immediately and then follow an escape trajectory */
-  private Command makeShootAndLeaveCommand(List<Translation2d> leaveTrajectory, double finishHeadingDegrees) {
-    Command shoot = makeRaiseAndShootCommand(31.5, 2850, null); // angle: 31.5 degrees, speed: 2850 rpm
+  private Command sequence1(List<Translation2d> leaveTrajectory, double finishHeadingDegrees, double aimArmAngle, double shootingFlywheelRpm) {
     Command leave = new SwerveTrajectoryToPoint(m_drivetrain, leaveTrajectory, Rotation2d.fromDegrees(finishHeadingDegrees));
-
+    var raiseAndShoot = makeRaiseAndShootCommand(aimArmAngle, shootingFlywheelRpm, "sequence1angle");
     // connect the two commands
-    Command result = new SequentialCommandGroup(shoot, leave);
+    Command result = new SequentialCommandGroup(raiseAndShoot, leave);
     return result;
   }
 
-  /**
+  private Command sequence2(List<Translation2d> leaveTrajectory, double finishHeadingDegrees, double aimArmAngle, double shootingFlywheelRpm) {
+    Command leave = new SwerveTrajectoryToPoint(m_drivetrain, leaveTrajectory, Rotation2d.fromDegrees(finishHeadingDegrees));
+      double approachSpeed = 0.3, seekingSpeed = 0.1; // set them to zero if you want to just aim
+    var approachAndAim = new FollowVisualTarget.WhenToFinish(-16, 0, 0, true);
+    var approach = new FollowVisualTarget(
+      m_drivetrain, m_pickupCamera, CameraConstants.kNotePipelineIndex,
+      seekingSpeed, approachSpeed,
+      CameraConstants.kPickupCameraImageRotation,
+      approachAndAim);
+
+    var raiseAndShoot = makeRaiseAndShootCommand(aimArmAngle, shootingFlywheelRpm, "sequence2angle");
+    var raiseAndShootIfFound = raiseAndShoot.onlyIf(approach::getEndedWithTarget);  
+    Command result = new SequentialCommandGroup(raiseAndShoot, approach, raiseAndShootIfFound, leave);
+    return result;
+ }
+
+ private Command sequence3(List<Translation2d> leaveTrajectory, double finishHeadingDegrees, double aimArmAngle, double shootingFlywheelRpm){
+    Command leave = new SwerveTrajectoryToPoint(m_drivetrain, leaveTrajectory, Rotation2d.fromDegrees(finishHeadingDegrees));
+      double approachSpeed = 0.3, seekingSpeed = 0.1; // set them to zero if you want to just aim
+    var approachAndAim = new FollowVisualTarget.WhenToFinish(-16, 0, 0, true);
+    var approach = new FollowVisualTarget(
+      m_drivetrain, m_pickupCamera, CameraConstants.kNotePipelineIndex,
+      seekingSpeed, approachSpeed,
+      CameraConstants.kPickupCameraImageRotation,
+      approachAndAim);
+var aim = new FollowVisualTarget(
+      m_drivetrain, m_aimingCamera, CameraConstants.kSpeakerPipelineIndex,
+      seekingSpeed, approachSpeed,
+      CameraConstants.kAimingCameraImageRotation,
+      approachAndAim);
+    var raiseAndShoot = makeRaiseAndShootCommand(aimArmAngle, shootingFlywheelRpm, "sequence3angle");
+    var raiseAndShootIfFound = raiseAndShoot.onlyIf(approach::getEndedWithTarget);  
+    Command result = new SequentialCommandGroup(raiseAndShoot, aim, raiseAndShootIfFound, aim, raiseAndShootIfFound, leave);
+    return result;
+  }
+  
+  private Command sequence4(List<Translation2d> leaveTrajectory, double finishHeadingDegrees, double aimArmAngle, double shootingFlywheelRpm){
+   Command leave = new SwerveTrajectoryToPoint(m_drivetrain, leaveTrajectory, Rotation2d.fromDegrees(finishHeadingDegrees));
+      double approachSpeed = 0.3, seekingSpeed = 0.1; // set them to zero if you want to just aim
+    var approachAndAim = new FollowVisualTarget.WhenToFinish(-16, 0, 0, true);
+    var approach = new FollowVisualTarget(
+      m_drivetrain, m_pickupCamera, CameraConstants.kNotePipelineIndex,
+      seekingSpeed, approachSpeed,
+      CameraConstants.kPickupCameraImageRotation,
+      approachAndAim);
+var aim = new FollowVisualTarget(
+      m_drivetrain, m_aimingCamera, CameraConstants.kSpeakerPipelineIndex,
+      seekingSpeed, approachSpeed,
+      CameraConstants.kAimingCameraImageRotation,
+      approachAndAim);
+    var raiseAndShoot = makeRaiseAndShootCommand(aimArmAngle, shootingFlywheelRpm, "sequence4angle");
+    var raiseAndShootIfFound = raiseAndShoot.onlyIf(approach::getEndedWithTarget);  
+    Command result = new SequentialCommandGroup(raiseAndShoot, aim, raiseAndShootIfFound, aim, raiseAndShootIfFound, aim, raiseAndShootIfFound, leave);
+    return result;
+  }
+  /**var aim = new FollowVisualTarget(
+      m_drivetrain, m_aimingCamera, CameraConstants.kSpeakerPipelineIndex,
+      seekingSpeed, approachSpeed,
+      CameraConstants.kAimingCameraImageRotation,
+      approachAndAim);
    * Use this to pass the autonomous command to the main {@link Robot} class.
    *
    * @return the command to run in autonomous
@@ -342,7 +400,7 @@ public class RobotContainer {
     // after shooting, use the blue centerline approach from the right
     var escapeTrajectory = FieldMap.kBlueApproachCenerlineFromLeft;
     double faceNorthWestToPrepareToPickup = 45; // degrees
-    return makeShootAndLeaveCommand(escapeTrajectory, faceNorthWestToPrepareToPickup);
+    return sequence1(escapeTrajectory, faceNorthWestToPrepareToPickup, AutoConstants.kShootFromCloseArmAngle, 2850);
   }
 
   public static void testInit() {
