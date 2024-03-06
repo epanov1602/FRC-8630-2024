@@ -165,7 +165,7 @@ public final class Constants {
     // turning
     public static final double kPRotation = 0.07 / DriveConstants.kMaxAngularSpeed; // proportional gain for rotation: if set too high, robot will overshoot
     public static final double kMaxTurningSpeed = 0.99;
-    public static final double kMaxTurningSpeedForVisualTargets = 0.20; // only applies when target seeking is disabled
+    public static final double kMaxTurningSpeedForVisualTargets = 1.2 / DriveConstants.kMaxAngularSpeed; // only applies when target seeking is disabled
     public static final double kMinTurningSpeed = 0.03; // any value lower than this causes motors to not spin at all
     public static final double kDirectionToleranceDegrees = 1.5; // plus minus 1.5 degrees of direction tolerance is ok
     public static final double kTurningSpeedToleranceDegreesPerSecond = 7; // if the chassis is moving slower than this and facing the right way, we can stop aiming
