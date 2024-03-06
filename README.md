@@ -34,6 +34,26 @@ go inside of `configureButtonBindings()` function, create a command there and bi
 ^^ note how we used `onTrue` method, it means that the command will start when button is pushed, but you don't need to hold the button to keep the command running.
 The command will end when it finishes, not when the operator releases the button.
 
+Bonus: try the same with a more advanced version of this command
+```
+private Command makeConsistentEjectNoteCommand() {
+    double ejectIntakeSpeed = 0.17; // is 0.17 a good speed to eject the note?
+    Command raiseArm = new RaiseArm(m_arm, ArmConstants.kArmAngleToEjectIntoAmp, 0); // is 94 a good angle to eject the note into the amp reliably? 
+    Command ejectAndPush = new EjectNote(m_intake, m_arm, ejectIntakeSpeed, ArmConstants.kArmAngleToPushIntoAmp); // is 80 a good angle for pushing the note in
+    Command raiseEjectAndPush = new SequentialCommandGroup(raiseArm, ejectAndPush);
+
+    // to do it more reliably, ensure consistent starting angle 
+    Command dropToLowerAngle = new RaiseArm(m_arm, ArmConstants.kArmAngleToPushIntoAmp - 5, 0); // TODO: remove, this is a hack until arm PID coeffs are tuned
+    Command raiseToPushAngle = new RaiseArm(m_arm, ArmConstants.kArmAngleToPushIntoAmp, 0); // good starting angle
+    Command ejectRoutine = new SequentialCommandGroup(dropToLowerAngle, raiseToPushAngle, raiseEjectAndPush);
+
+    // also ensure that bumper keeps touching the amp wall (easy: just be driving towards amp all this time)
+    Command beDriving = m_drivetrain.run(() -> m_drivetrain.arcadeDrive(0.2, 0));
+
+    // the result is "be driving until the eject routine is completed"
+    return ejectRoutine.deadlineWith(beDriving);
+  }
+```
 
 ## 2. POV-down button to pick up without driving towards the target (driver is supposed to do it)
 
@@ -62,26 +82,46 @@ First, go to `RobotContainer.java` and somewhere add a function that creates a p
 go inside of `configureButtonBindings()` function, create a pickup command there and bind it to POV-down button:
 ```
     // POV down: pick up the piece using just arm (but not automatically driving towards it)
-    Command pickUpWithoutDriving = makePickupNoteCommand(false, 30); // raise arm by 30 degrees after pickup
+    Command pickUpWithoutDriving = makePickupNoteCommand(false, 80); // raise arm by 80 degrees after pickup
     m_driverJoystick.povDown().whileTrue(pickUpWithoutDriving);
 
 ```
 ^^ note how we used `whileTrue` method, it means that the command will only be allowed to run while button is pressed.
 And the moment the operator stops holding the button, the command is ended.
 
+Bonus: make the robot drive towards that note when the button is pressed.
+```
+    Command pickUpWhileDriving = makePickupNoteCommand(true, 80); // raise arm by 80 degrees after pickup
+    m_driverJoystick.povDown().whileTrue(pickUpWhileDriving);
+```
 
-## 3. POV-left button to pick up *with* driving towards the target (this approach can also be used in autonomous)
-We already did most of the work above, because the appropriate command is can already be created with
+## 3. POV-left button to pick up using the camera (this approach can also be used in autonomous)
+We already did most of the work above, now we can use the pick-up functionality but we need to add visual aiming ahead of pickup.
 ```
-makePickupNoteCommand(true, 30)
+  private Command makeApproachAndPickupNoteCommand(double armAngleAfterPickup) {
+    // raise arm to get it out of the way of blocking the camera
+    var raiseArm = new RaiseArm(m_arm, 80, 0);
+
+    // stop approaching the note visually when it's at -16 degrees below horizon, at our feet
+    var whenToStop = new FollowVisualTarget.WhenToFinish(-16, 0, 0, false);
+
+    // command 1: approach using camera
+    var approachAndAim = new FollowVisualTarget(
+      m_drivetrain, m_pickupCamera, CameraConstants.kNotePipelineIndex, CameraConstants.kNoteApproachRotationSpeed, CameraConstants.kNoteApproachSpeed,
+      CameraConstants.kPickupCameraImageRotation, whenToStop);
+    
+    // command 2: pick up using the previously tested pick-up command
+    var thenPickup = makePickupNoteCommand(true, armAngleAfterPickup);
+
+    return new SequentialCommandGroup(raiseArm, approachAndAim, thenPickup);
+  }
 ```
-(notice how the first argument became `driveTowards=true`).
 
 All that's left to do is go inside of `configureButtonBindings()` function and bind it to a button
 ```
     // POV left: pick up the piece using arm and drivetrain (to automatically wiggle-drive towards it, maximizing the chances of pickup)
-    Command pickUpWithDriving = makePickupNoteCommand(true, 30); // raise arm by 30 degrees after pickup
-    m_driverJoystick.povLeft().whileTrue(pickUpWithDriving);
+    Command pickUpAutomatically = makeApproachAndPickupNoteCommand(80); // raise arm by 80 degrees after successful pickup
+    m_driverJoystick.povLeft().whileTrue(pickUpAutomatically);
 
 ```
 
