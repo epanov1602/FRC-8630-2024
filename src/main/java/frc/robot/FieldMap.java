@@ -90,9 +90,9 @@ public final class FieldMap {
 
   /* firing table (angle to tag -> angle to raise the arm):
    * aimAngleToFiringAngle:
-   *   -1.5: 53
-   *   0.29: 50.5
-   *   2.77: 47
+   *   -1.5: 52.5
+   *   0.29: 50.0
+   *   2.77: 46
    *   6.16: 41.5
    *   9.37: 37
    *   12.5: 32
@@ -100,6 +100,6 @@ public final class FieldMap {
 
    public static final CubicSpline kSpeakerFiringTable = new CubicSpline(
      new double[] { -1.52, 0.29,  2.77, 6.16, 9.37, 12.5 },
-     new double[] {    53, 50, 46, 41.5,   37,   32 }
+     new double[] {    52.5, 50.0, 46, 41.5,   37,   32 }
    );
 }
