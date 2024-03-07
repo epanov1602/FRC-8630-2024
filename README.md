@@ -226,27 +226,104 @@ A bit more complicated: first we need to aim horizontally, then pick the arm ang
     joystick.leftBumper().whileTrue(brakeAndShoot);
 ```
 
-## Autonomous 1: fire the preloaded gamepiece and then escape
-We can use the commands created above like legos: connect a command to shoot the note + command to escape using a trajectory
-```
-  /* A command to fire the note immediately and then follow an escape trajectory */
-  private Command makeShootAndLeaveCommand(List<Translation2d> leaveTrajectory, double finishHeadingDegrees) {
-    Command shoot = makeRaiseAndShootCommand(31.5, 2850, null); // angle: 31.5 degrees, speed: 2850 rpm
-    Command leave = new SwerveTrajectoryToPoint(m_drivetrain, leaveTrajectory, Rotation2d.fromDegrees(finishHeadingDegrees));
+## Autonomous 1: fire the preloaded gamepiece, pick another one, fire it too and escape
+Based on Crescendo videos so far, everyone does something like this (and it works):
+ * wait for a couple of seconds for the faster robots on your alliance to score their first piece
+ * then score, pick up some notes and score them
+ * and then escape the scoring zone using some trajectory
+ (weak robots escape in order to leave uncongested space for stronger robots to score more,
+  strong robots escape to centerline to have a strategic advantage at the start of teleop).
+.
 
-    // connect the two commands
-    Command result = new SequentialCommandGroup(shoot, leave);
+So, let's do just that. We can score a lot of points this way.
+Inside of GameConstants.java we have GameConstants class, in which we can define:
+ * starting point and robot angle heading
+ * escape trajectory at the end of autonomous (do we just go to the side, or to the center line?)
+.
+
+Here is an example, if a robot in the beginning it sitting at (X, Y) = (1.40, 4.80) like this:
+
+![initial position of robot](initial-position.png)
+
+and wants to eventually escape along the right approach to centerline (kBlueApproachCenerlineFromLeft) at the end of autonomous routine:
+
+![Alt text](blue-right-side-escape.png)
+
+.
+
+In `GameConstants.java` we then need to have:
+```
+public final class GameConstants {
+  // initial position of robot on the field
+  public static final double kInitialX = 1.90;
+  public static final double kInitialY = 4.50;
+  public static final double kInitialHeadingDegrees = 0; // should be around 0 for blue and around 180 for red
+
+  // autonomous escape trajectory to take, after all the pieces are scored
+  public static final List<Translation2d> kAutonomousEscapeTrajectory = FieldMap.kBlueApproachCenerlineFromLeft; // can be = null, if no escape is needed
+  public static final double kAutonomousEscapeFinalHeading = 0; // where to point at the end of autonomous escape
+}
+```
+
+, and finally we can put together an autonomous routine that would fire gamepieces and pick them up the same way as teleop driver would do by clicking buttons.
+
+Here is an example function for autonomous routine that scores two gamepieces in total (one preloaded and one picked up).
+We can put it at the end of `RobotContainer`` class in `RobotContainer.java`.
+
+```
+  /* A command to fire the note immediately, then pick and fire another,
+   * and then follow an escape trajectory defined in GameConstants */
+
+   private Command makeAutonomousCommandToScoreTwoNotes() {
+    // make sure we are starting with correct coordinates
+    Command resetOdometry = new ResetOdometry(m_drivetrain);
+
+    // fire a pre-loaded note that is already sitting on a robot
+    // -- do what clicking "right bumper" would do
+    Command score1 = makeApproachAndShootCommand();
+
+    // pickup another note, and fire it if pickup was a success
+    // -- do what clicking "POV left" would do
+    Command pickup2 = makeApproachNoteCommand(80).withTimeout(5); // no more than 5 seconds to pick up a note please
+    // -- do what clicking "left bumper" would do
+    Command score2 = makeBrakeAndShootCommand().onlyIf(m_intake::isNoteInside); // only shoot it, if the note is inside
+  
+    // all the pickup and scoring together
+    Command allPickupAndScoring = new SequentialCommandGroup(resetOdometry, score1, pickup2, score2);
+
+    // if the escape trajectory is null, do not escape anywhere: our trajectory is just pickup and scoring
+    if (GameConstants.kAutonomousEscapeTrajectory == null)
+      return allPickupAndScoring;
+
+    // otherwise (if escape trajectory is not null), attach the escape command at the end to follow that trajectory
+    Command escape = new SwerveTrajectoryToPoint(
+      m_drivetrain, GameConstants.kAutonomousEscapeTrajectory, Rotation2d.fromDegrees(GameConstants.kAutonomousEscapeFinalHeading));
+
+    Command result = new SequentialCommandGroup(allPickupAndScoring, escape);
     return result;
   }
 ```
-.
 
-Now, in `RobotContainer.java` we can find the function that creates the autonomous command, and rewrite it to use the function above.
+But how do we make the robot actually do this when it's time for autonomous driving?
+To do that, we'll need to go to the end of `RobotContainer.java` and overwrite the contents of `getAutonomousCommand` function:
 ```
   public Command getAutonomousCommand() {
-    // after shooting, use the blue centerline approach from the right
-    var escapeTrajectory = FieldMap.kBlueApproachCenerlineFromLeft;
-    double faceNorthWestToPrepareToPickup = 45; // degrees
-    return makeShootAndLeaveCommand(escapeTrajectory, faceNorthWestToPrepareToPickup);
+    Command delay = new WaitCommand(1.0); // wait for one second for the stronger robots on the alliance to score their first note (we'll need to appropriately each time)
+    Command action = makeAutonomousCommandToScoreTwoNotes();
+    return new SequentialCommandGroup(delay, action);
   }
 ```
+
+## Challenge
+Above is an example function that creates an command to score two notes and escape.
+It was called `makeAutonomousCommandToScoreTwoNotes()`.
+
+Can you write `makeAutonomousCommandToScore1Note()`?
+
+Can you write `makeAutonomousCommandToScore3Notes()`?
+
+Can you write `makeAutonomousCommandToScore4Notes()`? (in case no robot on our alliance can score at all)
+
+Can you think of a way to write `getAutonomousCommand()` using one of those functions you wrote?
+
+Let's test them all.

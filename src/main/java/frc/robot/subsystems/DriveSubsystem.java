@@ -22,7 +22,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 import frc.robot.Constants.DriveConstants;
-import frc.robot.Constants.OdometryConstants;
+import frc.robot.GameConstants;
 import frc.utils.SwerveUtils;
 
 
@@ -157,7 +157,7 @@ public class DriveSubsystem extends SubsystemBase {
    */
   public void resetOdometry() {
     zeroHeading();
-    resetOdometry(new Pose2d(OdometryConstants.kInitialX, OdometryConstants.kInitialY, Rotation2d.fromDegrees(OdometryConstants.kInitialHeadingDegrees)));
+    resetOdometry(new Pose2d(GameConstants.kInitialX, GameConstants.kInitialY, Rotation2d.fromDegrees(GameConstants.kInitialHeadingDegrees)));
   }
 
   public void resetOdometry(Pose2d pose) {
@@ -183,11 +183,11 @@ public class DriveSubsystem extends SubsystemBase {
     if (wiggleCount < 1) {
       // first we try without rotation
       arcadeDrive(fwdSpeed, 0);
-    } else if (Math.round(wiggleCount) % 2 == 0) {
-      // then if we made number of wiggles, time to wiggle right
+    } else if (Math.round(wiggleCount) % 2 != 0) {
+      // then if we made odd number of wiggles, time to wiggle right
       arcadeDrive(fwdSpeed, -wiggleRotationSpeed);
     } else {
-      // otherwise if we made odd number of wiggles, time to wiggle left
+      // otherwise if we made even number of wiggles, time to wiggle left
       arcadeDrive(fwdSpeed, wiggleRotationSpeed);
     }
   }

@@ -4,6 +4,8 @@
 
 package frc.robot;
 
+import java.util.List;
+
 import com.revrobotics.CANSparkBase.IdleMode;
 
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -27,6 +29,20 @@ import edu.wpi.first.math.util.Units;
  */
 public final class Constants {
 
+  public static final class JoystickConstants {
+    public static final boolean kFieldRelative = true; 
+    public static final boolean kCopterJoystickLayout = false;
+    public static final boolean useTwoJoysticks = true;
+
+    /**
+     * Use XBox controller or MS Flight Control Joystick for testing and
+     * development.
+     */
+    public static final int kDriverControllerPort = 0;
+    public static final int kManipulatorController = 1; // second joystick for the manipulator control
+    public static final double kDriveDeadband = 0.03; // plus minus 3% from zero does not count
+  }
+
   public static final class CANIDs {
     // SPARK MAX CAN IDs
     public static final int kFrontLeftDrivingCanId = 1;
@@ -46,13 +62,6 @@ public final class Constants {
     public static final int kArmMotorRight = 13;
   
     public static final int kPDH = 23;
-  }
-
-  public final class OdometryConstants {
-    // initial position of robot on the field (does not have to be {x=0, y=0})
-    public static final double kInitialX = 0;
-    public static final double kInitialY = 0;
-    public static final double kInitialHeadingDegrees = 0;
   }
 
   public static final class DriveConstants {
@@ -147,20 +156,6 @@ public final class Constants {
     public static final double kDrivingMinSpeedMetersPerSecond = 0.01; // avoids oscillations at low battery going in-and-out of brownout (might need to be lower)
   }
 
-  public static final class OIConstants {
-    public static final boolean kFieldRelative = true; 
-    public static final boolean kCopterJoystickLayout = false;
-    public static final boolean useTwoJoysticks = true;
-
-    /**
-     * Use XBox controller or MS Flight Control Joystick for testing and
-     * development.
-     */
-    public static final int kDriverControllerPort = 0;
-    public static final int kManipulatorController = 1; // second joystick for the manipulator control
-    public static final double kDriveDeadband = 0.03; // plus minus 3% from zero does not count
-  }
-
   public static final class AutoConstants {
     // simple driving and turning
 
@@ -188,12 +183,12 @@ public final class Constants {
       new TrapezoidProfile.Constraints(
             DriveConstants.kPhysicalMaxAngularSpeedRadiansPerSecond / 10,
             DriveConstants.kMaxAngularAccelerationRadiansPerSecondSquared / 4);
-
-    public static final double kShootFromCloseArmAngle = 31.5;
   }
 
   public static final class CameraConstants {
-    public static final Rotation2d kPickupCameraImageRotation = Rotation2d.fromDegrees(-19); // if the note ends up to the left of the robot centerline, make this more negative
+    public static final Rotation2d kPickupCameraImageRotation = Rotation2d.fromDegrees(-22);
+    public static final Rotation2d kPickupCameraImageRotationIfClose = Rotation2d.fromDegrees(-24); // if the note ends up to the left of the robot centerline, make this more negative
+    public static final Rotation2d kPickupCameraImageRotationIfVeryClose = Rotation2d.fromDegrees(-26); // if the note ends up to the left of the robot centerline, make this more negative
     public static final String kPickupCameraName = "limelight-pickup";
 
     public static final Rotation2d kAimingCameraImageRotation = Rotation2d.fromDegrees(0); // should be -30 for camera mounted above the left swerve module 
@@ -269,6 +264,7 @@ public final class Constants {
     public static final double kArmAngleToEjectIntoAmp = 95; // start ejecting note into amp from this angle
     public static final double kArmAngleToPushIntoAmp = 80; // after ejecting note into, drop the arm to this angle to push the note in
     public static final double kArmAgleToSaveEnergy = 80; // increase after we use both absolute and relative encoders
+    public static final double kArmAngleToShoot = 31l;
     public static final double initialMinAngle = 11;
     public static final double initialMaxAngle = 100;
 

@@ -22,7 +22,7 @@ public class PDH extends SubsystemBase {
     System.out.println("switchable channel:" + enabled);
   }
 
-  public void setSwitchableChannelOn(){ 
+  public void setSwitchableChannelOn() { 
     setSwitchableChannel(true);
   }
 

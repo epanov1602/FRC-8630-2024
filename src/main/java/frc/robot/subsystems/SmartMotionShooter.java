@@ -37,6 +37,8 @@ public class SmartMotionShooter extends SubsystemBase {
    * Set the veloicty goal in motor RPM
    */
   public void setVelocityGoal(double rpm) {
+    setupMotorConfig(); // in case controller forgot, which happens in brownout
+
     System.out.println("Shooter::setVelocityGoal(" + rpm + ")");
     // dirty hack: reverse the velocity goal, but not the motor direction
     rpm = -rpm;
@@ -53,17 +55,25 @@ public class SmartMotionShooter extends SubsystemBase {
   public SmartMotionShooter() {
     m_leadMotor = new CANSparkFlex(Constants.CANIDs.kShooterMotorA, MotorType.kBrushless);
     m_leadMotor.restoreFactoryDefaults();
-    m_leadMotor.setInverted(false);
-    m_leadMotor.setIdleMode(IdleMode.kCoast);
     
     m_followMotor = new CANSparkFlex(Constants.CANIDs.kShooterMotorB, MotorType.kBrushless);
     m_followMotor.restoreFactoryDefaults();
-    m_followMotor.follow(m_leadMotor, false);
-    m_followMotor.setIdleMode(IdleMode.kCoast);
-
+  
     // initialze PID controller and encoder objects
     m_pidController = m_leadMotor.getPIDController();
     m_encoder = m_leadMotor.getEncoder();
+
+    setupMotorConfig();
+
+    m_leadMotor.burnFlash();
+    m_followMotor.burnFlash();
+  }
+
+  private void setupMotorConfig() {
+    m_leadMotor.setInverted(false);
+    m_leadMotor.setIdleMode(IdleMode.kCoast);
+    m_followMotor.follow(m_leadMotor, false);
+    m_followMotor.setIdleMode(IdleMode.kCoast);
 
     // set PID coefficients
     m_pidController.setP(initialP);
@@ -77,9 +87,6 @@ public class SmartMotionShooter extends SubsystemBase {
     m_pidController.setSmartMotionMinOutputVelocity(initialMinVel, kSmartMotionSlot);
     m_pidController.setSmartMotionMaxAccel(initialMaxAcc, kSmartMotionSlot);
     m_pidController.setSmartMotionAllowedClosedLoopError(initialAllowedError, kSmartMotionSlot);
-
-    m_leadMotor.burnFlash();
-    m_followMotor.burnFlash();
   }
 
   // will it work in autonomous? and let's test if it is needed at all

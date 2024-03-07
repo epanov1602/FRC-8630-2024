@@ -73,6 +73,8 @@ public class FollowVisualTarget extends Command {
     m_seekingTurnSpeed = seekingTurnSpeed;
     m_approachSpeed = approachSpeed;
     m_imageRotation = rotateImageToLeft;
+    if (whenToStop == null)
+      whenToStop = new WhenToFinish(0, 0, 0, true);
     m_whenToFinish = whenToStop;
     addRequirements(drivetrain);
     addRequirements(camera);
@@ -108,7 +110,7 @@ public class FollowVisualTarget extends Command {
       }
       System.out.println("target is not seen now, but we keep looking for it");
       double seekingDirection = 1;
-      if (m_lastSeenTargetX > 0)
+      if (m_camera.getLastValidX() > 0)
         seekingDirection = -1;
       m_drivetrain.arcadeDrive(0, m_seekingTurnSpeed * seekingDirection, false);
     } else {
@@ -195,11 +197,9 @@ public class FollowVisualTarget extends Command {
         m_endedWithTarget = true; // if we just switched to the new pipeline and finished immediately, the percentage counter didn't update yet
       m_camera.setPipeline(m_lastPipelineIndex);
       if (m_endedWithTarget)
-        System.out.println("ended with target");
+        System.out.println("ended with target" + (interrupted ? " (interrupted)" : ""));
       else
-        System.out.println("did not end with target");
-      if (interrupted)
-        System.out.println("in fact, got interrupted");
+        System.out.println("did not end with target" + (interrupted ? " (interrupted)" : ""));
   }
 
   // Returns true when the command should end.

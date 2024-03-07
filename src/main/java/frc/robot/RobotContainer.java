@@ -20,9 +20,9 @@ import frc.robot.Constants.ArmConstants;
 import frc.robot.Constants.AutoConstants;
 import frc.robot.Constants.CameraConstants;
 import frc.robot.Constants.DriveConstants;
-import frc.robot.Constants.OIConstants;
+import frc.robot.Constants.JoystickConstants;
 
-import frc.robot.Constants.OdometryConstants;
+import frc.robot.GameConstants;
 import frc.robot.commands.AimToDirection;
 import frc.robot.commands.EjectFromShooter;
 import frc.robot.commands.FollowVisualTarget;
@@ -51,6 +51,7 @@ import edu.wpi.first.wpilibj2.command.ParallelRaceGroup;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.SwerveControllerCommand;
+import edu.wpi.first.wpilibj2.command.WaitCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 import frc.utils.CubicSpline;
@@ -77,8 +78,8 @@ public class RobotContainer {
   private PDH m_pdh = new PDH();
 
   // all teleop controllers
-  private CommandXboxController m_driverJoystick = new CommandXboxController(OIConstants.kDriverControllerPort);
-  private CommandXboxController m_manipulatorJoystick = new CommandXboxController(OIConstants.kManipulatorController);
+  private CommandXboxController m_driverJoystick = new CommandXboxController(JoystickConstants.kDriverControllerPort);
+  private CommandXboxController m_manipulatorJoystick = new CommandXboxController(JoystickConstants.kManipulatorController);
 
   /**
    * The container for the robot. Contains subsystems, OI devices, and commands.
@@ -90,7 +91,7 @@ public class RobotContainer {
     Command setDefaultCameraPipelines = m_pickupCamera.runOnce(this::setDefaultCameraPipelines);
 
     // Configure default teleop commands
-    if (Constants.OIConstants.kCopterJoystickLayout)
+    if (Constants.JoystickConstants.kCopterJoystickLayout)
       m_drivetrain.setDefaultCommand(setDefaultCameraPipelines.andThen(new RunCommand(this::copterJoystickDrive, m_drivetrain)));
     else
       m_drivetrain.setDefaultCommand(setDefaultCameraPipelines.andThen(new RunCommand(this::tankJoystickDrive, m_drivetrain)));
@@ -107,6 +108,19 @@ public class RobotContainer {
     setDefaultCameraPipelines();
   }
 
+  public static void disabledInit() {
+
+  }
+
+  public static void testInit() {
+
+  }
+
+  public static void testPeriodic() {
+
+  }
+
+
   private void setDefaultCameraPipelines() {
     m_pickupCamera.setPipeline(CameraConstants.kNotePipelineIndex);
     m_aimingCamera.setPipeline(CameraConstants.kSpeakerPipelineIndex);
@@ -115,17 +129,17 @@ public class RobotContainer {
   private void tankJoystickDrive() {
     // tank layout: left stick for movement, right stick for rotation
     m_drivetrain.drive(
-        -MathUtil.applyDeadband(m_driverJoystick.getLeftY(), OIConstants.kDriveDeadband),
-        -MathUtil.applyDeadband(m_driverJoystick.getLeftX(), OIConstants.kDriveDeadband),
-        -MathUtil.applyDeadband(m_driverJoystick.getRightX(), OIConstants.kDriveDeadband),
-        Constants.OIConstants.kFieldRelative,
+        -MathUtil.applyDeadband(m_driverJoystick.getLeftY(), JoystickConstants.kDriveDeadband),
+        -MathUtil.applyDeadband(m_driverJoystick.getLeftX(), JoystickConstants.kDriveDeadband),
+        -MathUtil.applyDeadband(m_driverJoystick.getRightX(), JoystickConstants.kDriveDeadband),
+        Constants.JoystickConstants.kFieldRelative,
         true);
   }
 
   private void copterJoystickDrive() {
     // if keeping high pressure on the throttle stick, not field-relative anymore (for manual aiming)
     double slowDownFactor = 1.0;
-    boolean fieldRelative = Constants.OIConstants.kFieldRelative;
+    boolean fieldRelative = Constants.JoystickConstants.kFieldRelative;
     if (Math.abs(m_driverJoystick.getLeftY()) > 0.5) {
       fieldRelative = false;
       slowDownFactor = 0.75;
@@ -133,9 +147,9 @@ public class RobotContainer {
 
     // copter layoyt otherwise: right stick for movement, left stick for rotation
     m_drivetrain.drive(
-        -MathUtil.applyDeadband(m_driverJoystick.getRightY() * slowDownFactor, OIConstants.kDriveDeadband),
-        -MathUtil.applyDeadband(m_driverJoystick.getRightX() * slowDownFactor, OIConstants.kDriveDeadband),
-        -MathUtil.applyDeadband(m_driverJoystick.getLeftX() * slowDownFactor, OIConstants.kDriveDeadband),
+        -MathUtil.applyDeadband(m_driverJoystick.getRightY() * slowDownFactor, JoystickConstants.kDriveDeadband),
+        -MathUtil.applyDeadband(m_driverJoystick.getRightX() * slowDownFactor, JoystickConstants.kDriveDeadband),
+        -MathUtil.applyDeadband(m_driverJoystick.getLeftX() * slowDownFactor, JoystickConstants.kDriveDeadband),
         fieldRelative,
         true);
   }
@@ -145,19 +159,16 @@ public class RobotContainer {
     // - X brake for blocking,
     // - lower arm to dive under the chain
     // - raise arm back
-    //m_driverJoystick.x().onTrue(m_drivetrain.run(m_drivetrain::setX));
+    m_driverJoystick.x().onTrue(m_drivetrain.run(m_drivetrain::setX));
     m_driverJoystick.a().onTrue(new RaiseArm(m_arm, ArmConstants.initialMinAngle, 0));
     m_driverJoystick.y().onTrue(new RaiseArm(m_arm, ArmConstants.kArmAgleToSaveEnergy, 0));
   
-    m_driverJoystick.x().onTrue(m_pdh.run(m_pdh::setSwitchableChannelOn));
-    m_driverJoystick.b().onTrue(m_pdh.run(m_pdh::setSwitchableChannelOff));
-
     // operator can: do all else with the arm
     var joystick = m_manipulatorJoystick;
-    if (!Constants.OIConstants.useTwoJoysticks)
+    if (!Constants.JoystickConstants.useTwoJoysticks)
       joystick = m_driverJoystick; // if not using two joysticks, use driver joystick for both driving and arm
 
-    Command approachAndShoot = makeApproachAndShootCommand(31.5, 2850, "armShootAngle"); // can make it "armShootAngle"
+    Command approachAndShoot = makeApproachAndShootCommand();
     joystick.rightBumper().whileTrue(approachAndShoot);
 
     Command brakeAndShoot = makeBrakeAndShootCommand();
@@ -166,6 +177,7 @@ public class RobotContainer {
     // POV up: just shoot assuming we are up close, don't even look at the camera
     Command raiseAndShoot = makeRaiseAndShootCommand(31.5, 2850, "armShootAngle"); // can make it "armShootAngle" (another option: 37, 5700)
     joystick.povUp().onTrue(raiseAndShoot);
+
     // POV left: pick up using camera
     Command approachAndPickup = makeApproachNoteCommand(80); // raise arm to 80 degrees after pickup, to save energy
     joystick.povLeft().whileTrue(approachAndPickup);
@@ -201,8 +213,15 @@ public class RobotContainer {
     return result.deadlineWith(keepWheelsOnXBrake);
   }
 
-  private Command makeApproachAndShootCommand(double aimArmAngle, double shootingFlywheelRpm, String setAngleFromSmartDashboardKey) {
-    double approachSpeed = -0.3, seekingSpeed = 0.1; // set them to zero if you want to just aim
+  private Command makeApproachAndShootCommand() {
+
+    // when shooting from up close, these are the calibrated parameters: angle (degrees), and speed (RPM)
+    double shootingFlywheelRpm = 2850;
+    double aimArmAngle = 31.5;
+    String setAngleFromSmartDashboardKey = null; // set to some non-null string if that angle needs to be re-calibrated
+
+    // approach speed constants: set them to zero if you want to just aim, and not approach the speaker
+    double approachSpeed = -0.3, seekingSpeed = 0.1;
     var approachAndAim = new FollowVisualTarget.WhenToFinish(0, 12, 0, true);
     var aim = new FollowVisualTarget(
       m_drivetrain, m_aimingCamera, CameraConstants.kSpeakerPipelineIndex,
@@ -212,7 +231,6 @@ public class RobotContainer {
 
     var raiseAndShoot = makeRaiseAndShootCommand(aimArmAngle, shootingFlywheelRpm, setAngleFromSmartDashboardKey);
     var raiseAndShootIfFound = raiseAndShoot.onlyIf(aim::getEndedWithTarget);
-
     return new SequentialCommandGroup(aim, raiseAndShootIfFound);
   }
 
@@ -227,7 +245,6 @@ public class RobotContainer {
       CameraConstants.kAimingCameraImageRotation,
       dontDriveJustAim);
 
-
     // -- aiming vertically and shooting, with wheels locked in X position
     double initialDropAngle = 22;
     double lowestPossibleFiringAngle = 37;
@@ -239,10 +256,10 @@ public class RobotContainer {
     Command raiseAfterwardsToSaveEnergy = new RequestArmAngle(m_arm, ArmConstants.kArmAgleToSaveEnergy);
     Command raiseArmAndShoot = new SequentialCommandGroup(dropArm, raiseArm, shoot, raiseAfterwardsToSaveEnergy);
 
-    Command keepWheelsOnXBrake = m_drivetrain.run(m_drivetrain::setX); // keep wheels on X brake, otherwise opponent robots can easily disrupt aiming
+    // here: keep wheels on X brake, otherwise opponent robots can easily disrupt aiming
+    Command keepWheelsOnXBrake = m_drivetrain.run(m_drivetrain::setX);
+
     Command raiseArmAndShootWithWheelsLocked = raiseArmAndShoot.deadlineWith(keepWheelsOnXBrake);
-
-
     Command shootIfAimed = raiseArmAndShootWithWheelsLocked.onlyIf(aim::getEndedWithTarget);
     return new SequentialCommandGroup(aim, shootIfAimed);
   }
@@ -306,16 +323,40 @@ public class RobotContainer {
   private Command makeApproachNoteCommand(double armAngleAfterPickup) {
     var raiseArm = new RaiseArm(m_arm, 80, 0);
 
-    var whenToStop = new FollowVisualTarget.WhenToFinish(-16, 0, 0, false);
-
+    var whenToStopApproaching = new FollowVisualTarget.WhenToFinish(-16, 0, 0, false);
     var approachAndAim = new FollowVisualTarget(
-      m_drivetrain, m_pickupCamera, CameraConstants.kNotePipelineIndex, CameraConstants.kNoteApproachRotationSpeed, CameraConstants.kNoteApproachSpeed,
-      CameraConstants.kPickupCameraImageRotation, whenToStop);
-    
-    var thenPickup = makePickupNoteCommand(true, armAngleAfterPickup);
+      m_drivetrain, m_pickupCamera,
+      CameraConstants.kNotePipelineIndex, CameraConstants.kNoteApproachRotationSpeed, CameraConstants.kNoteApproachSpeed,
+      CameraConstants.kPickupCameraImageRotation, whenToStopApproaching);
 
-    return new SequentialCommandGroup(raiseArm, approachAndAim, thenPickup);
+    // 3d geometry plays a trick on us when we have to make adjustments to video from camera MOUNTED ON THE SIDE of robot
+    // if we approached too close, this is hacky but works:
+
+    // -- adjustment 1
+    Command aimIfVeryClose = new FollowVisualTarget(
+      m_drivetrain, m_pickupCamera, CameraConstants.kNotePipelineIndex,
+      0, 0, // zero drive speed, just re-aim using slightly differnt angle below
+      CameraConstants.kPickupCameraImageRotationIfClose, null);
+    aimIfVeryClose = aimIfVeryClose.withTimeout(1).onlyIf(this::isPickupTargetVeryClose);
+
+    // -- adjustment 2
+    Command aimIfVeryVeryClose = new FollowVisualTarget(
+      m_drivetrain, m_pickupCamera, CameraConstants.kNotePipelineIndex,
+      0, 0, // zero drive speed, just re-aim using slightly differnt angle below
+      CameraConstants.kPickupCameraImageRotationIfVeryClose, null);
+    aimIfVeryVeryClose = aimIfVeryVeryClose.withTimeout(1).onlyIf(this::isPickupTargetVeryVeryClose);
+
+    // -- and pick up
+    Command pickup = makePickupNoteCommand(true, armAngleAfterPickup);
+
+    // all together:
+    Command adjustAndPickup = new SequentialCommandGroup(aimIfVeryClose, aimIfVeryVeryClose, pickup);
+    return new SequentialCommandGroup(raiseArm, approachAndAim, adjustAndPickup.onlyIf(approachAndAim::getEndedWithTarget));
   }
+
+  private boolean isPickupTargetVeryClose() { return m_pickupCamera.getY() < -17; }
+
+  private boolean isPickupTargetVeryVeryClose() { return m_pickupCamera.getY() < -19; }
 
   private boolean operatorUsingSticks() {
     double totalInput = Math.abs(m_driverJoystick.getLeftX()) + Math.abs(m_driverJoystick.getLeftY())
@@ -357,7 +398,7 @@ public class RobotContainer {
       seekingSpeed, approachSpeed,
       CameraConstants.kPickupCameraImageRotation,
       approachAndAim);
-var aim = new FollowVisualTarget(
+    var aim = new FollowVisualTarget(
       m_drivetrain, m_aimingCamera, CameraConstants.kSpeakerPipelineIndex,
       seekingSpeed, approachSpeed,
       CameraConstants.kAimingCameraImageRotation,
@@ -369,7 +410,7 @@ var aim = new FollowVisualTarget(
   }
   
   private Command sequence4(List<Translation2d> leaveTrajectory, double finishHeadingDegrees, double aimArmAngle, double shootingFlywheelRpm){
-   Command leave = new SwerveTrajectoryToPoint(m_drivetrain, leaveTrajectory, Rotation2d.fromDegrees(finishHeadingDegrees));
+    Command leave = new SwerveTrajectoryToPoint(m_drivetrain, leaveTrajectory, Rotation2d.fromDegrees(finishHeadingDegrees));
       double approachSpeed = 0.3, seekingSpeed = 0.1; // set them to zero if you want to just aim
     var approachAndAim = new FollowVisualTarget.WhenToFinish(-16, 0, 0, true);
     var approach = new FollowVisualTarget(
@@ -377,7 +418,7 @@ var aim = new FollowVisualTarget(
       seekingSpeed, approachSpeed,
       CameraConstants.kPickupCameraImageRotation,
       approachAndAim);
-var aim = new FollowVisualTarget(
+    var aim = new FollowVisualTarget(
       m_drivetrain, m_aimingCamera, CameraConstants.kSpeakerPipelineIndex,
       seekingSpeed, approachSpeed,
       CameraConstants.kAimingCameraImageRotation,
@@ -387,11 +428,8 @@ var aim = new FollowVisualTarget(
     Command result = new SequentialCommandGroup(raiseAndShoot, aim, raiseAndShootIfFound, aim, raiseAndShootIfFound, aim, raiseAndShootIfFound, leave);
     return result;
   }
-  /**var aim = new FollowVisualTarget(
-      m_drivetrain, m_aimingCamera, CameraConstants.kSpeakerPipelineIndex,
-      seekingSpeed, approachSpeed,
-      CameraConstants.kAimingCameraImageRotation,
-      approachAndAim);
+
+  /**
    * Use this to pass the autonomous command to the main {@link Robot} class.
    *
    * @return the command to run in autonomous
@@ -400,21 +438,39 @@ var aim = new FollowVisualTarget(
     // after shooting, use the blue centerline approach from the right
     var escapeTrajectory = FieldMap.kBlueApproachCenerlineFromLeft;
     double faceNorthWestToPrepareToPickup = 45; // degrees
-    return sequence1(escapeTrajectory, faceNorthWestToPrepareToPickup, AutoConstants.kShootFromCloseArmAngle, 2850);
+    return sequence1(escapeTrajectory, faceNorthWestToPrepareToPickup, ArmConstants.kArmAngleToShoot, 2850);
   }
 
-  public static void testInit() {
-    // run testInit() on each subsystem.
-    m_drivetrain.testInit();
+  /* A command to fire the note immediately, then pick and fire another,
+   * and then follow an escape trajectory defined in GameConstants */
+
+   private Command makeAutonomousCommandToScoreTwoNotes() {
+    // make sure we are starting with correct coordinates
+    Command resetOdometry = new ResetOdometry(m_drivetrain);
+
+    // fire a pre-loaded note that is already sitting on a robot
+    // -- do what clicking "right bumper" would do
+    Command score1 = makeApproachAndShootCommand();
+
+    // pickup another note, and fire it if pickup was a success
+    // -- do what clicking "POV left" would do
+    Command pickup2 = makeApproachNoteCommand(80).withTimeout(5); // no more than 5 seconds to pick up a note please
+    // -- do what clicking "left bumper" would do
+    Command score2 = makeBrakeAndShootCommand().onlyIf(m_intake::isNoteInside); // only shoot it, if the note is inside
+  
+    // all the pickup and scoring together
+    Command allPickupAndScoring = new SequentialCommandGroup(resetOdometry, score1, pickup2, score2);
+
+    // if the escape trajectory is null, do not escape anywhere: our trajectory is just pickup and scoring
+    if (GameConstants.kAutonomousEscapeTrajectory == null)
+      return allPickupAndScoring;
+
+    // otherwise (if escape trajectory is not null), attach the escape command at the end to follow that trajectory
+    Command escape = new SwerveTrajectoryToPoint(
+      m_drivetrain, GameConstants.kAutonomousEscapeTrajectory, Rotation2d.fromDegrees(GameConstants.kAutonomousEscapeFinalHeading));
+
+    Command result = new SequentialCommandGroup(allPickupAndScoring, escape);
+    return result;
   }
 
-  public static void testPeriodic() {
-    // run testPeriodic() on each subsystem
-    m_drivetrain.testPeriodic();
-  }
-
-  public void disabledInit() {
-    // run testInit() on each subsystem.
-    m_pdh.setSwitchableChannelOff();
-  }
 }
