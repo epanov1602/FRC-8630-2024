@@ -4,6 +4,7 @@
 
 package frc.robot;
 
+import edu.wpi.first.hal.AllianceStationID;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
@@ -13,6 +14,7 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.trajectory.Trajectory;
 import edu.wpi.first.math.trajectory.TrajectoryConfig;
 import edu.wpi.first.math.trajectory.TrajectoryGenerator;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.XboxController.Button;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -21,7 +23,7 @@ import frc.robot.Constants.AutoConstants;
 import frc.robot.Constants.CameraConstants;
 import frc.robot.Constants.DriveConstants;
 import frc.robot.Constants.JoystickConstants;
-
+import frc.robot.AutonomousConfiguration;
 import frc.robot.GameConstants;
 import frc.robot.commands.AimToDirection;
 import frc.robot.commands.EjectFromShooter;
@@ -440,15 +442,19 @@ public class RobotContainer {
    * @return the command to run in autonomous
    */
   public Command getAutonomousCommand() {
-    // make sure we are starting with correct coordinates
-    Command resetOdometry = new ResetOdometry(m_drivetrain);
-    // after shooting, use the blue centerline approach from the right
-    var delay = new WaitCommand(0.0);
-    var autonomous = makeAutonomousCommandToScoreThreeNotes();
-    return new SequentialCommandGroup(resetOdometry, delay, autonomous);
+    int notesToScore = GameConstants.numAutonomousNotesToScore;
+    AllianceStationID allianceStation = DriverStation.getRawAllianceStation();
+    System.out.println("autonomous command for alliance station " + allianceStation + ", with " + notesToScore + " notes to score");
+    AutonomousConfiguration config = AutonomousConfiguration.get(allianceStation);
+    if (config != null)
+      return makeWinningAutonomousCommand(config, notesToScore);
+    else
+      return makeAutonomousCommandToScoreThreeNotes();
   }
 
    private Command makeAutonomousCommandToScoreThreeNotes() {
+    Command resetOdometry = new ResetOdometry(m_drivetrain);
+
     // fire a pre-loaded note that is already sitting on a robot
     // -- do what clicking "right bumper" would do
     Command aim1 = new AimToDirection(m_drivetrain, GameConstants.kInitialShootingHeadingDegrees);
@@ -471,7 +477,7 @@ public class RobotContainer {
 
     // all the pickup and scoring together
     Command allPickupAndScoring = new SequentialCommandGroup(
-      aim1, score1, pickup2, return2, score2, lookLeft3, pickup3, return3, score3);
+      resetOdometry, aim1, score1, pickup2, return2, score2, lookLeft3, pickup3, return3, score3);
 
     // if the escape trajectory is null, do not escape anywhere: our trajectory is just pickup and scoring
     if (GameConstants.kAutonomousEscapeTrajectory == null)
@@ -485,57 +491,49 @@ public class RobotContainer {
     return result;
   }
 
+  private Command makeWinningAutonomousCommand(AutonomousConfiguration config, int notesToScore) {
+    ResetOdometry resetOdometry = new ResetOdometry(m_drivetrain, config.m_initialPose);
 
-
-  /* A command to fire the note immediately, then pick and fire another,
-   * and then follow an escape trajectory defined in GameConstants */
-
-   private Command makeAutonomousCommandToScoreTwoNotes() {
     // fire a pre-loaded note that is already sitting on a robot
     // -- do what clicking "right bumper" would do
-    Command aim1 = new AimToDirection(m_drivetrain, GameConstants.kInitialShootingHeadingDegrees);
+    Command aim1 = new AimToDirection(m_drivetrain, config.m_initialHeadingToSpeaker);
     Command score1 = makeBrakeAndShootCommand();
 
     // pickup another note, and fire it if pickup was a success
+    Command find2 = new AimToDirection(m_drivetrain, config.m_initialHeadingToSpeaker + 180);
     // -- do what clicking "POV left" would do
-    Command pickup2 = makeApproachNoteCommand(80).withTimeout(7); // no more than 5 seconds to pick up a note please
-    Command return2 = new SwerveToPoint(m_drivetrain, GameConstants.kInitialX, GameConstants.kInitialY, GameConstants.kInitialShootingHeadingDegrees, false);
+    Command pickup2 = makeApproachNoteCommand(80).withTimeout(7); // no more than 7 seconds to pick up a note please
+    Command return2 = new SwerveToPoint(m_drivetrain,
+      config.m_initialPose.getX(), config.m_initialPose.getY(), config.m_initialHeadingToSpeaker + 180,
+      false);
     // -- do what clicking "left bumper" would do
     Command score2 = makeBrakeAndShootCommand().onlyIf(m_intake::isNoteInside); // only shoot it, if the note is inside
-  
-    // all the pickup and scoring together
-    Command allPickupAndScoring = new SequentialCommandGroup(aim1, score1, pickup2, return2, score2);
 
-    // if the escape trajectory is null, do not escape anywhere: our trajectory is just pickup and scoring
-    if (GameConstants.kAutonomousEscapeTrajectory == null)
-      return allPickupAndScoring;
+    // pickup another note, and fire it if pickup was a success
+    Command find3 = new AimToDirection(m_drivetrain, config.m_headingToSecondPickupNote);
+    // -- do what clicking "POV left" would do
+    Command pickup3 = makeApproachNoteCommand(80).withTimeout(7); // no more than 7 seconds to pick up a note please
+    Command return3 = new SwerveToPoint(m_drivetrain,
+      config.m_initialPose.getX(), config.m_initialPose.getY(), config.m_initialHeadingToSpeaker + 180,
+      false);
+    // -- do what clicking "left bumper" would do
+    Command score3 = makeBrakeAndShootCommand().onlyIf(m_intake::isNoteInside); // only shoot it, if the note is inside
+
+    // all the pickup and scoring together
+    Command allPickupAndScoring;
+    if (notesToScore < 2)
+      allPickupAndScoring = new SequentialCommandGroup(aim1, score1);
+    else if (notesToScore == 2)
+      allPickupAndScoring = new SequentialCommandGroup(aim1, score1, find2, pickup2, return2, score2);
+    else /* assuming 3 */
+      allPickupAndScoring = new SequentialCommandGroup(aim1, score1, find2, pickup2, return2, score2, find3, pickup3, return3, score3);
+
+    // and no need to escape?
+    if (config.m_escapeTrajectory == null)
+      return new SequentialCommandGroup(resetOdometry, allPickupAndScoring);
 
     // otherwise (if escape trajectory is not null), attach the escape command at the end to follow that trajectory
-    Command escape = new SwerveTrajectoryToPoint(
-      m_drivetrain, GameConstants.kAutonomousEscapeTrajectory, Rotation2d.fromDegrees(GameConstants.kAutonomousEscapeFinalHeading));
-
-    Command result = new SequentialCommandGroup(allPickupAndScoring, escape);
-    return result;
+    Command escape = new SwerveTrajectoryToPoint(m_drivetrain, config.m_escapeTrajectory, config.m_initialPose.getRotation());
+    return new SequentialCommandGroup(resetOdometry, allPickupAndScoring, escape);
   }
-
-   private Command makeAutonomousCommandToScoreOneNote() {
-    // fire a pre-loaded note that is already sitting on a robot
-    // -- do what clicking "right bumper" would do
-    Command score1 = makeBrakeAndShootCommand();
-  
-    // all the pickup and scoring together
-    Command allPickupAndScoring = new SequentialCommandGroup(score1);
-
-    // if the escape trajectory is null, do not escape anywhere: our trajectory is just pickup and scoring
-    if (GameConstants.kAutonomousEscapeTrajectory == null)
-      return allPickupAndScoring;
-
-    // otherwise (if escape trajectory is not null), attach the escape command at the end to follow that trajectory
-    Command escape = new SwerveTrajectoryToPoint(
-      m_drivetrain, GameConstants.kAutonomousEscapeTrajectory, Rotation2d.fromDegrees(GameConstants.kAutonomousEscapeFinalHeading));
-
-    Command result = new SequentialCommandGroup(allPickupAndScoring, escape);
-    return result;
-  }
-
 }

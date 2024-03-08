@@ -8,69 +8,73 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.geometry.Pose2d;
 import frc.utils.CubicSpline;
 
 /** Add your docs here. */
 public final class FieldMap {
 
   // -- blue starting points
-  public static final Translation2d kBlueApproachSpeakerFromRight = new Translation2d(1.90, 4.35);
-  public static final Translation2d kBlueApproachSpeakerFromCenter = new Translation2d(1.90, 5.55);
-  public static final Translation2d kBlueApproachSpeakerFromLeft = new Translation2d(1.90, 6.75);
-  public static final Translation2d kBlueSpeaker = new Translation2d(0.2, 5.55);
+  public static final Pose2d kBlueStartRight = new Pose2d(1.60, 4.40, Rotation2d.fromDegrees(0));
+  public static final Pose2d kBlueStartMiddle = new Pose2d(1.55, 5.55, Rotation2d.fromDegrees(0));
+  public static final Pose2d kBlueStartLeft = new Pose2d(1.60, 6.60, Rotation2d.fromDegrees(0));
+  public static final Pose2d kBlueSpeaker = new Pose2d(0.2, 5.55, Rotation2d.fromDegrees(0));
 
   // -- red starting points
-  public static final Translation2d kRedApproachSpeakerFromLeft = new Translation2d(14.65, 4.35);
-  public static final Translation2d kRedApproachSpeakerFromCenter = new Translation2d(14.65, 5.55);
-  public static final Translation2d kReadApproachSpeakerFromRight = new Translation2d(14.65, 6.75);
-  public static final Translation2d kRedSpeaker = new Translation2d(16.3, 5.55);
+  public static final Pose2d kRedStartLeft = new Pose2d(16.50 - 1.60, 4.40, Rotation2d.fromDegrees(180));
+  public static final Pose2d kRedStartMiddle = new Pose2d(16.50 - 1.55, 5.55, Rotation2d.fromDegrees(180));
+  public static final Pose2d kRedStartRight = new Pose2d(16.50 - 1.60, 6.60, Rotation2d.fromDegrees(180));
+  public static final Pose2d kRedSpeaker = new Pose2d(16.50 - 0.2, 5.55, Rotation2d.fromDegrees(180));
 
   // -- blue centerline approaches
   public static final List<Translation2d> kBlueApproachCenerlineFromRight = rescale(1.0, List.of(
-    new Translation2d(1.90, 4.10),
-    new Translation2d(2.57, 2.73),
-    new Translation2d(3.71, 1.47),
-    new Translation2d(5.16, 0.71),
-    new Translation2d(6.52, 0.65),
-    new Translation2d(7.25, 1.26)
+    new Translation2d(1.60, 4.40),
+    new Translation2d(2.52, 2.53),
+    new Translation2d(3.81, 1.56),
+    new Translation2d(5.21, 1.03),
+    new Translation2d(6.43, 0.85),
+    new Translation2d(7.17, 0.85)
   ));
-
-  public static final List<Translation2d> kBlueRetreatFromCenerlineAlongRightWall = reverse(kBlueApproachCenerlineFromRight);
 
   public static final List<Translation2d> kBlueApproachCenerlineFromLeft = rescale(1.0, List.of(
-    new Translation2d(1.90, 6.10),
+    new Translation2d(1.60, 6.59),
     new Translation2d(3.83, 7.00),
-    new Translation2d(5.39, 7.39),
-    new Translation2d(6.32, 7.51),
-    new Translation2d(7.27, 5.37)
+    new Translation2d(5.38, 7.37),
+    new Translation2d(7.46, 7.47)
   ));
 
-  public static final List<Translation2d> kBlueRetreatFromCenerlineAlongLeftWall = reverse(kBlueApproachCenerlineFromLeft);
+  public static final List<Translation2d> kBlueApproachCenerlineFromMiddle = rescale(1.0, List.of(
+    new Translation2d(1.55, 5.54),
+    new Translation2d(5.82, 6.70),
+    new Translation2d(7.30, 5.82)
+  ));
+
 
 
   // -- red centerline approaches
   public static final List<Translation2d> kRedApproachCenerlineFromLeft = rescale(1.0, List.of(
-    new Translation2d(16.50 - 1.90, 4.10),
-    new Translation2d(16.50 - 2.57, 2.73),
-    new Translation2d(16.50 - 3.71, 1.47),
-    new Translation2d(16.50 - 5.16, 0.71),
-    new Translation2d(16.50 - 6.52, 0.65),
-    new Translation2d(16.50 - 7.25, 1.26)
+    new Translation2d(16.50 - 1.60, 4.40),
+    new Translation2d(16.50 - 2.52, 2.53),
+    new Translation2d(16.50 - 3.81, 1.56),
+    new Translation2d(16.50 - 5.21, 1.03),
+    new Translation2d(16.50 - 6.43, 0.85),
+    new Translation2d(16.50 - 7.17, 0.85)
   ));
-
-  public static final List<Translation2d> kRedRetreatFromCenerlineAlongLeftWall = reverse(kBlueApproachCenerlineFromRight);
 
   public static final List<Translation2d> kRedApproachCenerlineFromRight = rescale(1.0, List.of(
-    new Translation2d(16.50 - 1.90, 6.10),
+    new Translation2d(16.50 - 1.60, 6.59),
     new Translation2d(16.50 - 3.83, 7.00),
-    new Translation2d(16.50 - 5.39, 7.39),
-    new Translation2d(16.50 - 6.32, 7.51),
-    new Translation2d(16.50 - 7.27, 5.37)
+    new Translation2d(16.50 - 5.38, 7.37),
+    new Translation2d(16.50 - 7.46, 7.47)
   ));
 
-  public static final List<Translation2d> kRedRetreatFromCenerlineAlongRightWall = reverse(kRedApproachCenerlineFromLeft);
-
+  public static final List<Translation2d> kRedApproachCenerlineFromMiddle = rescale(1.0, List.of(
+    new Translation2d(16.50 - 1.55, 5.54),
+    new Translation2d(16.50 - 5.82, 6.70),
+    new Translation2d(16.50 - 7.30, 5.82)
+  ));
 
 
   // helpful function
