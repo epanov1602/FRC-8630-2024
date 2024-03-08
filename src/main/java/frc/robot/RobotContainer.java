@@ -99,7 +99,8 @@ public class RobotContainer {
     // the default command for the aiming camera is to change the LEDs depending on whether we are close enough to fire
     // (default command only runs if no other command needs to run)
     m_aimingCamera.setDefaultCommand(m_aimingCamera.run(() -> {
-      if (m_aimingCamera.getY() > -1.4) // if target Y angle altitude is >0, we are close enough to fire from this distance ~successfully
+      double y = m_aimingCamera.getY();
+      if (y != 0 && y > -1.4) // if target Y angle altitude is >0, we are close enough to fire from this distance ~successfully
          m_aimingCamera.setLightOn();
       else
          m_aimingCamera.setLightOff();
@@ -165,7 +166,7 @@ public class RobotContainer {
   
     // operator can: do all else with the arm
     var joystick = m_manipulatorJoystick;
-    if (!Constants.JoystickConstants.useTwoJoysticks)
+    if (!Constants.JoystickConstants.kUseTwoJoysticks)
       joystick = m_driverJoystick; // if not using two joysticks, use driver joystick for both driving and arm
 
     Command approachAndShoot = makeApproachAndShootCommand();

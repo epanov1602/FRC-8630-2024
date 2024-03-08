@@ -32,7 +32,7 @@ public final class Constants {
   public static final class JoystickConstants {
     public static final boolean kFieldRelative = true; 
     public static final boolean kCopterJoystickLayout = false;
-    public static final boolean useTwoJoysticks = true;
+    public static final boolean kUseTwoJoysticks = true;
 
     /**
      * Use XBox controller or MS Flight Control Joystick for testing and
@@ -164,7 +164,7 @@ public final class Constants {
     public static final double kMaxTurningSpeed = 0.99;
     public static final double kMaxTurningSpeedForVisualTargets = 1.2 / DriveConstants.kMaxAngularSpeed; // only applies when target seeking is disabled
     public static final double kMinTurningSpeed = 0.03; // any value lower than this causes motors to not spin at all
-    public static final double kDirectionToleranceDegrees = 1.5; // plus minus 1.5 degrees of direction tolerance is ok
+    public static final double kDirectionToleranceDegrees = 2.0; // plus minus 1.5 degrees of direction tolerance is ok
     public static final double kTurningSpeedToleranceDegreesPerSecond = 7; // if the chassis is moving slower than this and facing the right way, we can stop aiming
       
     // driving
