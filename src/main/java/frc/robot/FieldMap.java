@@ -74,13 +74,13 @@ public final class FieldMap {
 
 
   // helpful function
-  private static List<Translation2d> reverse(List<Translation2d> t) {
+  public static List<Translation2d> reverse(List<Translation2d> t) {
     List<Translation2d> trajectory = new ArrayList<Translation2d>(t);
     Collections.reverse(trajectory);
     return trajectory;
   }
 
-  private static List<Translation2d> rescale(double factor, List<Translation2d> t) {
+  public static List<Translation2d> rescale(double factor, List<Translation2d> t) {
     List<Translation2d> trajectory = new ArrayList<Translation2d>(t.size());
     for (Translation2d waypoint : t)
       trajectory.add(waypoint.times(factor));
@@ -93,13 +93,13 @@ public final class FieldMap {
    *   -1.5: 52.5
    *   0.29: 50.0
    *   2.77: 46
-   *   6.16: 41.5
+   *   6.16: 40.5
    *   9.37: 37
    *   12.5: 32
    */
 
    public static final CubicSpline kSpeakerFiringTable = new CubicSpline(
      new double[] { -1.52, 0.29,  2.77, 6.16, 9.37, 12.5 },
-     new double[] {    52.5, 50.0, 46, 41.5,   37,   32 }
+     new double[] {    52.5, 50.0, 46, 40.5,   37,   32 }
    );
 }
