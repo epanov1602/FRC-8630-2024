@@ -160,7 +160,7 @@ public class RobotContainer {
     // - X brake for blocking,
     // - lower arm to dive under the chain
     // - raise arm back
-    m_driverJoystick.x().onTrue(m_drivetrain.run(m_drivetrain::setX));
+    m_driverJoystick.x().onTrue(m_drivetrain.runOnce(m_drivetrain::setX));
     m_driverJoystick.a().onTrue(new RaiseArm(m_arm, ArmConstants.initialMinAngle, 0));
     m_driverJoystick.y().onTrue(new RaiseArm(m_arm, ArmConstants.kArmAgleToSaveEnergy, 0));
   
