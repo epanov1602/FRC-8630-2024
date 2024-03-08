@@ -17,6 +17,7 @@ import edu.wpi.first.math.trajectory.TrajectoryGenerator;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.XboxController.Button;
+import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.Constants.ArmConstants;
 import frc.robot.Constants.AutoConstants;
@@ -83,11 +84,16 @@ public class RobotContainer {
   private CommandXboxController m_driverJoystick = new CommandXboxController(JoystickConstants.kDriverControllerPort);
   private CommandXboxController m_manipulatorJoystick = new CommandXboxController(JoystickConstants.kManipulatorController);
 
+  // and two auto controllers
+  private SendableChooser<AutonomousConfiguration> m_chosenAutoRoutine = new SendableChooser<AutonomousConfiguration>();
+  private SendableChooser<Integer> m_chosenNumNotesToScore = new SendableChooser<Integer>();
+
   /**
    * The container for the robot. Contains subsystems, OI devices, and commands.
    */
   public RobotContainer() {
     // Configure the button bindings
+    configureAutonomousOptions();
     configureButtonBindings();
 
     Command setDefaultCameraPipelines = m_pickupCamera.runOnce(this::setDefaultCameraPipelines);
@@ -111,8 +117,8 @@ public class RobotContainer {
     setDefaultCameraPipelines();
   }
 
-  public static void disabledInit() {
-
+  public void disabledInit() {
+    setDefaultCameraPipelines();    
   }
 
   public static void testInit() {
@@ -155,6 +161,25 @@ public class RobotContainer {
         -MathUtil.applyDeadband(m_driverJoystick.getLeftX() * slowDownFactor, JoystickConstants.kDriveDeadband),
         fieldRelative,
         true);
+  }
+
+  private void configureAutonomousOptions() {
+    // routine
+    m_chosenAutoRoutine.setDefaultOption("Start @ Blue3", AutonomousConfiguration.kBlueLeft);
+    m_chosenAutoRoutine.addOption("Start @ Blue2", AutonomousConfiguration.kBlueMiddle);
+    m_chosenAutoRoutine.addOption("Start @ Blue1", AutonomousConfiguration.kBlueRight);
+    m_chosenAutoRoutine.addOption("Start @ Red1", AutonomousConfiguration.kRedLeft);
+    m_chosenAutoRoutine.addOption("Start @ Red2", AutonomousConfiguration.kRedMiddle);
+    m_chosenAutoRoutine.addOption("Start @ Red3", AutonomousConfiguration.kRedRight);
+
+    // parameters
+    m_chosenNumNotesToScore.setDefaultOption("Score 1 Note", 1);
+    m_chosenNumNotesToScore.addOption("Score 2 Notes", 2);
+    m_chosenNumNotesToScore.addOption("Score 3 Notes", 3);
+
+    // publish these two choosers
+    SmartDashboard.putData(m_chosenAutoRoutine);
+    SmartDashboard.putData(m_chosenNumNotesToScore);
   }
 
   private void configureButtonBindings() {
@@ -442,10 +467,11 @@ public class RobotContainer {
    * @return the command to run in autonomous
    */
   public Command getAutonomousCommand() {
-    int notesToScore = GameConstants.numAutonomousNotesToScore;
-    AllianceStationID allianceStation = DriverStation.getRawAllianceStation();
-    System.out.println("autonomous command for alliance station " + allianceStation + ", with " + notesToScore + " notes to score");
-    AutonomousConfiguration config = AutonomousConfiguration.get(allianceStation);
+    int notesToScore = m_chosenNumNotesToScore.getSelected();
+    AutonomousConfiguration config = m_chosenAutoRoutine.getSelected();
+
+    System.out.println("Autonomous command " + config.m_name + " with " + notesToScore + " notes to score");
+    
     if (config != null)
       return makeWinningAutonomousCommand(config, notesToScore);
     else
