@@ -52,7 +52,7 @@ public class IntakeNote extends Command {
 
     // these three constants were calibrated by Brian, hope they work for everyone
     final double kPickupForwardDriveSpeed = 2.0 / DriveConstants.kMaxSpeedMetersPerSecond; // any reason to not use max speed here?
-    final double kPickupWiggleRotationSpeed = 1.75 / DriveConstants.kMaxAngularSpeed;
+    final double kPickupWiggleRotationSpeed = 2.5 / DriveConstants.kMaxAngularSpeed;
     final double kPickupWiggleIntervalSeconds = 0.5;
 
     if (m_drivetrain != null) {

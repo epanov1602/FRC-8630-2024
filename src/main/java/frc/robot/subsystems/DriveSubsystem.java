@@ -183,7 +183,7 @@ public class DriveSubsystem extends SubsystemBase {
     if (wiggleCount < 1) {
       // first we try without rotation
       arcadeDrive(fwdSpeed, 0);
-    } else if (Math.round(wiggleCount) % 2 != 0) {
+    } else if (Math.round(wiggleCount) % 2 == 0) {
       // then if we made odd number of wiggles, time to wiggle right
       arcadeDrive(fwdSpeed, -wiggleRotationSpeed);
     } else {
