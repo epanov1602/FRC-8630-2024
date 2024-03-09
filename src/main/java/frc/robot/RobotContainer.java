@@ -203,7 +203,7 @@ public class RobotContainer {
     joystick.leftBumper().whileTrue(brakeAndShoot);
 
     // POV up: just shoot assuming we are up close, don't even look at the camera
-    Command raiseAndShoot = makeRaiseAndShootCommand(31.5, 2850, "armShootAngle"); // can make it "armShootAngle" (another option: 37, 5700)
+    Command raiseAndShoot = makeRaiseAndShootCommand(31.5, 5700, "armShootAngle"); // can make it "armShootAngle" (another option: 37, 5700)
     joystick.povUp().onTrue(raiseAndShoot);
 
     // POV left: pick up using camera
