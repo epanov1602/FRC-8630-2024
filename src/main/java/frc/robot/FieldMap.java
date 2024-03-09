@@ -110,7 +110,7 @@ public final class FieldMap {
 
    // shabazz
    public static final CubicSpline kSpeakerFiringTableShabazz = new CubicSpline(
-     new double[] { -1.52, 0.29,  2.77, 6.16, 9.37, 12.5, 17.91 },
-     new double[] {    52.5, 50.0, 46,  41,   37,  35, 31  }
+     new double[] { 0,  2.77, 6.16, 9.37, 12.5, 17.91 },
+     new double[] { 53.5, 49,  44.5, 40.5,  39, 34.5  }
    );
 }

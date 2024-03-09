@@ -112,7 +112,7 @@ public class RobotContainer {
     // (default command only runs if no other command needs to run)
     m_aimingCamera.setDefaultCommand(m_aimingCamera.run(() -> {
       double y = m_aimingCamera.getY();
-      if (y != 0 && y > -1.4) // if target Y angle altitude is >0, we are close enough to fire from this distance ~successfully
+      if (y != 0 && y > 0) // if target Y angle altitude is >0, we are close enough to fire from this distance ~successfully
          m_aimingCamera.setLightOn();
       else
          m_aimingCamera.setLightOff();
@@ -189,6 +189,10 @@ public class RobotContainer {
     m_firingTableOffset.addOption("FT+1", +1.0);
     m_firingTableOffset.addOption("FT+2", +2.0);
     m_firingTableOffset.addOption("FT+3", +3.0);
+    m_firingTableOffset.addOption("FT+5", +5.0);
+    m_firingTableOffset.addOption("FT+7", +7.0);
+    m_firingTableOffset.addOption("FT+9.9", +9.9);
+
     m_firingTableOffset.addOption("FT-1", -1.0);
     m_firingTableOffset.addOption("FT-2", -2.0);
     m_firingTableOffset.addOption("FT-3", -3.0);
@@ -221,7 +225,7 @@ public class RobotContainer {
     joystick.leftBumper().whileTrue(brakeAndShoot);
 
     // POV up: just shoot assuming we are up close, don't even look at the camera
-    Command raiseAndShoot = makeRaiseAndShootCommand(31.5, 5700, "armShootAngle"); // can make it "armShootAngle" (another option: 37, 5700)
+    Command raiseAndShoot = makeRaiseAndShootCommand(33, 5700, null); // can make it "armShootAngle" (another option: 37, 5700)
     joystick.povUp().onTrue(raiseAndShoot);
 
     // POV left: pick up using camera
@@ -262,8 +266,8 @@ public class RobotContainer {
   private Command makeApproachAndShootCommand() {
 
     // when shooting from up close, these are the calibrated parameters: angle (degrees), and speed (RPM)
-    double shootingFlywheelRpm = 2850;
-    double aimArmAngle = 31.5;
+    double shootingFlywheelRpm = 5700;
+    double aimArmAngle = 38;
     String setAngleFromSmartDashboardKey = null; // set to some non-null string if that angle needs to be re-calibrated
 
     // approach speed constants: set them to zero if you want to just aim, and not approach the speaker
