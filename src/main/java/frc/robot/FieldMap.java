@@ -102,8 +102,15 @@ public final class FieldMap {
    *   12.5: 32
    */
 
-   public static final CubicSpline kSpeakerFiringTable = new CubicSpline(
+   // 714
+   public static final CubicSpline kSpeakerFiringTable714 = new CubicSpline(
      new double[] { -1.52, 0.29,  2.77, 6.16, 9.37, 12.5 },
      new double[] {    52.5, 50.0, 46, 40.5,   37,   32 }
+   );
+
+   // shabazz
+   public static final CubicSpline kSpeakerFiringTableShabazz = new CubicSpline(
+     new double[] { -1.52, 0.29,  2.77, 6.16, 9.37, 12.5, 17.91 },
+     new double[] {    52.5, 50.0, 46,  41,   37,  35, 31  }
    );
 }

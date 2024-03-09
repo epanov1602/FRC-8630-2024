@@ -64,6 +64,8 @@ import static frc.robot.Constants.ArmConstants.initialMinAngle;
 import java.lang.reflect.Field;
 import java.util.List;
 
+import javax.swing.text.StyleContext.SmallAttributeSet;
+
 /*
  * This class is where the bulk of the robot should be declared.  Since Command-based is a
  * "declarative" paradigm, very little robot logic should actually be handled in the {@link Robot}
@@ -87,6 +89,8 @@ public class RobotContainer {
   // and two auto controllers
   private SendableChooser<AutonomousConfiguration> m_chosenAutoRoutine = new SendableChooser<AutonomousConfiguration>();
   private SendableChooser<Integer> m_chosenNumNotesToScore = new SendableChooser<Integer>();
+  private SendableChooser<CubicSpline> m_firingTable = new SendableChooser<CubicSpline>();
+  private SendableChooser<Double> m_firingTableOffset = new SendableChooser<Double>();
 
   /**
    * The container for the robot. Contains subsystems, OI devices, and commands.
@@ -177,9 +181,23 @@ public class RobotContainer {
     m_chosenNumNotesToScore.addOption("Score 2 Notes", 2);
     m_chosenNumNotesToScore.addOption("Score 3 Notes", 3);
 
+    // firing table
+    m_firingTable.setDefaultOption("Shabazz FT", FieldMap.kSpeakerFiringTable714);
+    m_firingTable.addOption("714 FT", FieldMap.kSpeakerFiringTableShabazz);
+
+    m_firingTableOffset.setDefaultOption("FT+0", 0.0);
+    m_firingTableOffset.addOption("FT+1", +1.0);
+    m_firingTableOffset.addOption("FT+2", +2.0);
+    m_firingTableOffset.addOption("FT+3", +3.0);
+    m_firingTableOffset.addOption("FT-1", -1.0);
+    m_firingTableOffset.addOption("FT-2", -2.0);
+    m_firingTableOffset.addOption("FT-3", -3.0);
+
     // publish these two choosers
     SmartDashboard.putData(m_chosenAutoRoutine);
     SmartDashboard.putData(m_chosenNumNotesToScore);
+    SmartDashboard.putData(m_firingTable);
+    SmartDashboard.putData(m_firingTableOffset);
   }
 
   private void configureButtonBindings() {
@@ -301,7 +319,10 @@ public class RobotContainer {
 
     // targetY angle tells us about how far the target is
     // use the firing table to find the parfect firing angle for this distance to target
-    double firingAngle = FieldMap.kSpeakerFiringTable.interpolate(targetY);
+    CubicSpline firingTable = m_firingTable.getSelected();
+    double firingTableOffset = m_firingTableOffset.getSelected();
+    double firingAngle = firingTable.interpolate(targetY) + firingTableOffset;
+
     SmartDashboard.putNumber("brakeAndShootFiringAngle", firingAngle);
     return firingAngle;
   }
