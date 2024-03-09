@@ -32,7 +32,7 @@ public final class Constants {
   public static final class JoystickConstants {
     public static final boolean kFieldRelative = true; 
     public static final boolean kCopterJoystickLayout = false;
-    public static final boolean kUseTwoJoysticks = false;
+    public static final boolean kUseTwoJoysticks = true;
 
     /**
      * Use XBox controller or MS Flight Control Joystick for testing and
